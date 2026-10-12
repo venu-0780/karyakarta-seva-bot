@@ -14,7 +14,8 @@
 // -----------------------------------------------------------------------------
 import { Actions, Button, Card, LinkButton } from "chat";
 
-import type { BotResponse, Reply } from "../types.js";
+import { config } from "../config.js";
+import type { BotResponse, CarouselMessage, ContactCard, LocationPin, Reply } from "../types.js";
 
 const MAX_BODY = 4096;
 const MAX_BUTTONS = 3;
@@ -192,6 +193,127 @@ async function postInteractive(thread: PostableThread, interactive: Record<strin
   }
 }
 
+/** Normalize a carousel card body: max 160 chars and at most 2 line breaks. */
+function clipCardBody(text: string): string {
+  const joined = text.split("\n").slice(0, 3).join("\n"); // 3 lines => 2 breaks
+  return clip(joined, 160);
+}
+
+/**
+ * Build the `cards` array for an interactive media carousel. Enforces WhatsApp's
+ * rules: 2-10 cards, every card the SAME header type (image or video), each with
+ * a public https media link and a single https cta_url. Returns undefined when
+ * the cards can't satisfy these constraints (caller then falls back).
+ */
+function buildCarouselCards(c: CarouselMessage): unknown[] | undefined {
+  const headerType: "image" | "video" = c.cards[0]?.video ? "video" : "image";
+  const cards: unknown[] = [];
+  for (const card of c.cards) {
+    const link = headerType === "video" ? card.video : card.image;
+    if (!isHttps(link) || !isHttps(card.url)) continue; // all links must be https
+    const header =
+      headerType === "video" ? { type: "video", video: { link } } : { type: "image", image: { link } };
+    const entry: Record<string, unknown> = {
+      card_index: cards.length,
+      type: "cta_url",
+      header,
+      action: {
+        name: "cta_url",
+        parameters: { display_text: clip(card.buttonLabel, 20) || "Open", url: card.url },
+      },
+    };
+    if (card.body) entry.body = { text: clipCardBody(card.body) };
+    cards.push(entry);
+    if (cards.length === 10) break;
+  }
+  return cards.length >= 2 ? cards : undefined;
+}
+
+/**
+ * Thin DIRECT Graph API sender for message types the adapter doesn't expose
+ * (media carousel, contacts, location). Resolves the recipient wa_id from the
+ * thread and posts the given message body. Returns false on any missing
+ * prerequisite or non-2xx response so callers can fall back gracefully.
+ */
+async function graphSend(thread: PostableThread, message: Record<string, unknown>): Promise<boolean> {
+  const token = config.whatsapp.accessToken;
+  const phoneId = config.whatsapp.phoneNumberId;
+  const decode = thread.adapter?.decodeThreadId;
+  if (!token || !phoneId || !decode || !thread.id) return false;
+  let to = "";
+  try {
+    to = decode.call(thread.adapter, thread.id).userWaId;
+  } catch {
+    return false;
+  }
+  if (!to) return false;
+  try {
+    const res = await fetch(`https://graph.facebook.com/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to, ...message }),
+    });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
+/** Send an interactive media carousel. Returns false when it can't be built/sent. */
+async function postCarousel(thread: PostableThread, c: CarouselMessage): Promise<boolean> {
+  const cards = buildCarouselCards(c);
+  if (!cards) return false;
+  return graphSend(thread, {
+    type: "interactive",
+    interactive: { type: "carousel", body: { text: clip(c.body, 1024) }, action: { cards } },
+  });
+}
+
+/** Send one or more tappable contact cards. Falls back to a text list. */
+async function postContacts(thread: PostableThread, contacts: ContactCard[]): Promise<void> {
+  const payload = contacts.map((c) => {
+    const firstName = c.name.split(/\s+/)[0] || c.name;
+    return {
+      name: { formatted_name: c.name, first_name: firstName },
+      phones: c.phones.map((p) => ({ phone: p, type: "WORK", wa_id: p.replace(/\D/g, "") })),
+      ...(c.org ? { org: { company: c.org } } : {}),
+    };
+  });
+  if (await graphSend(thread, { type: "contacts", contacts: payload })) return;
+  // Fallback: plain text so the number is still reachable.
+  const lines = contacts.map((c) => `📇 *${c.name}*${c.org ? ` — ${c.org}` : ""}\n${c.phones.join(", ")}`);
+  await thread.post({ markdown: lines.join("\n\n") });
+}
+
+/** Send a location pin. Falls back to a Google Maps link. */
+async function postLocation(thread: PostableThread, loc: LocationPin): Promise<void> {
+  const location: Record<string, unknown> = { latitude: loc.latitude, longitude: loc.longitude };
+  if (loc.name) location.name = loc.name;
+  if (loc.address) location.address = loc.address;
+  if (await graphSend(thread, { type: "location", location })) return;
+  // Fallback: a tappable maps link.
+  const label = loc.name ? `📍 *${loc.name}*\n` : "📍 ";
+  await thread.post({ markdown: `${label}https://maps.google.com/?q=${loc.latitude},${loc.longitude}` });
+}
+
+/** Fallback for a carousel: body text then each card as its own media message. */
+async function postCarouselFallback(thread: PostableThread, c: CarouselMessage): Promise<void> {
+  if (c.body) await thread.post({ markdown: c.body });
+  for (const card of c.cards) {
+    const url = card.video ?? card.image;
+    await postAttachment(thread, {
+      type: card.video ? "video" : "image",
+      url,
+      mimeType: card.video
+        ? "video/mp4"
+        : url?.toLowerCase().split("?")[0]?.endsWith(".png")
+          ? "image/png"
+          : "image/jpeg",
+      caption: [card.body, card.url].filter(Boolean).join("\n"),
+    });
+  }
+}
+
 /** Render a list as a numbered text block when a native list cannot be sent. */
 function renderListText(r: BotResponse): string {
   const lines: string[] = [];
@@ -244,6 +366,15 @@ async function postHeaderImage(thread: PostableThread, url?: string): Promise<vo
 
 /** Send one BotResponse over a Chat SDK thread. */
 export async function renderOne(thread: PostableThread, r: BotResponse): Promise<void> {
+  // 0) Interactive media carousel (premium visual). Sent via a direct Graph API
+  // call, with a sequential-media fallback. Handled first and exclusively.
+  if (r.carousel?.cards?.length) {
+    if (!(await postCarousel(thread, r.carousel))) {
+      await postCarouselFallback(thread, r.carousel);
+    }
+    return;
+  }
+
   // 1) Documents — one file per post; caption rides on the first.
   if (r.documents?.length) {
     for (const [i, d] of r.documents.entries()) {
@@ -305,6 +436,10 @@ export async function renderOne(thread: PostableThread, r: BotResponse): Promise
       for (const chunk of splitBody(r.text)) await thread.post({ markdown: chunk });
     }
   }
+
+  // 4) Location pin + contact cards ride below any text/buttons above.
+  if (r.location) await postLocation(thread, r.location);
+  if (r.contacts?.length) await postContacts(thread, r.contacts);
 }
 
 const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms));
@@ -319,6 +454,7 @@ export async function render(thread: PostableThread, reply: Reply): Promise<void
   const list = Array.isArray(reply) ? reply : [reply];
   for (const [i, r] of list.entries()) {
     await renderOne(thread, r);
-    if (r.media?.length && i < list.length - 1) await sleep(MEDIA_ORDER_DELAY_MS);
+    const sentMedia = Boolean(r.media?.length || r.carousel?.cards?.length || r.location || r.contacts?.length);
+    if (sentMedia && i < list.length - 1) await sleep(MEDIA_ORDER_DELAY_MS);
   }
 }

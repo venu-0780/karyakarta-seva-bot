@@ -7,16 +7,25 @@ import { prajaSankalpam } from "./flows/prajaSankalpam.js";
 import { pressMeet, pressMeetDay } from "./flows/pressMeet.js";
 import { talkingPoints } from "./flows/talkingPoints.js";
 import { detectIntent } from "./services/intents.js";
-import { languageChoice, readLangPref, t } from "./services/i18n.js";
+import { backButton, helpButton, languageChoice, readLangPref, t } from "./services/i18n.js";
 import type { FlowContext, Reply } from "./types.js";
 
-const GREETINGS = new Set(["hi", "hello", "menu", "start", "namaskaram", "నమస్కారం", "0"]);
+const GREETINGS = new Set([
+  "hi", "hello", "hey", "menu", "start", "namaskaram", "namaste", "0",
+  "నమస్కారం", "నమస్తే", "హాయ్", "హలో", "మెనూ", "మెను", "ప్రారంభం",
+]);
 const NUM_TO_ACTION: Record<string, string> = {
   "1": "tp", "2": "ps", "3": "pm", "4": "jagan", "5": "poll", "6": "id", "7": "media",
 };
 
+/** Coarse feature label for analytics (e.g. "tp-y" -> "tp", "vote-p2-1" -> "vote"). */
+function featureOf(act: string): string {
+  return act.split("-")[0] || "menu";
+}
+
 /** Dispatch a button/list action id to its flow (mirrors the prototype's `run`). */
 export async function runAction(ctx: FlowContext, act: string): Promise<Reply> {
+  await ctx.services.analytics.track(`use:${featureOf(act)}`, ctx.userId);
   if (act === "menu") return menu(ctx);
   if (act === "help") return help(ctx);
   if (act === "tp") return talkingPoints(ctx, "today");
@@ -59,11 +68,14 @@ export async function runText(ctx: FlowContext, raw: string): Promise<Reply> {
   if (!s) return [];
   const l = s.toLowerCase();
 
-  if (GREETINGS.has(l)) return menu(ctx, { banner: true });
+  if (GREETINGS.has(l)) {
+    await ctx.services.analytics.track("use:menu", ctx.userId);
+    return menu(ctx, { banner: true });
+  }
 
   const chosen = languageChoice(s);
   if (chosen) return setLanguage(ctx, chosen);
-  if (/^(help|\?|సహాయం)$/i.test(s)) return help(ctx);
+  if (/^(help|\?|సహాయం|సాయం|సహాయము)$/i.test(s)) return help(ctx);
 
   // Resolve answers to the ID confirmation before looking for a new intent.
   if (ctx.session.state === "id-confirm") {
@@ -77,6 +89,7 @@ export async function runText(ctx: FlowContext, raw: string): Promise<Reply> {
   const intent = detectIntent(s);
   if (intent) {
     if (intent === "id") {
+      await ctx.services.analytics.track("use:id", ctx.userId);
       return ctx.session.state === "id" ? idAsk(ctx) : idOffer(ctx);
     }
     return runAction(ctx, intent);
@@ -109,15 +122,13 @@ export async function runText(ctx: FlowContext, raw: string): Promise<Reply> {
   // A phone-number-looking message anywhere -> ID lookup
   if (/^\+?[\d\s-]{10,14}$/.test(s)) return idCheck(ctx, s);
 
+  await ctx.services.analytics.track("use:unmatched", ctx.userId);
   const pref = readLangPref(ctx.session.data);
   return {
     text:
       "⚠️ " +
       (pref === "both" ? `${t("te", "notUnderstood")}\n${t("en", "notUnderstood")}` : t(ctx.lang, "notUnderstood")),
-    buttons: [
-      { id: "help", label: "Help" },
-      { id: "menu", label: "Main menu" },
-    ],
+    buttons: [helpButton(pref), backButton(pref)],
   };
 }
 

@@ -52,6 +52,8 @@ export interface MembershipRecord {
   ac: string; // constituency
   stage: number; // index into STAGES
   where: string;
+  /** Collection-center coordinates, shown as a map pin when ready to collect. */
+  geo?: { latitude: number; longitude: number; name?: string; address?: string };
 }
 
 export interface MediaItem {

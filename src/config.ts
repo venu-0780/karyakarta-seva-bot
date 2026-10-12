@@ -18,6 +18,8 @@ export const config = {
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
     verifyToken: process.env.WHATSAPP_VERIFY_TOKEN,
     botUsername: opt("WHATSAPP_BOT_USERNAME", "praja-seva-helpdesk"),
+    // Graph API version for features the adapter doesn't expose (media carousel).
+    graphVersion: opt("WHATSAPP_GRAPH_VERSION", "v23.0"),
   },
   // Optional: when unset, the bot uses an in-memory state store (fine for local
   // dev / a single instance). Set it in production for multi-instance state.

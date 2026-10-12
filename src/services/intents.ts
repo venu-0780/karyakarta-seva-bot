@@ -28,21 +28,21 @@ export type IntentAction =
 // by normalize().
 
 // Jagan-specific (two-part: name AND press context must both match)
-const RE_JAGAN_NAME = /\b(?:jagan|jagan sir|jaganna|leader)\b|జగన్|జగనన్న/;
-const RE_PRESS_CONTEXT = /\b(?:press|meets?|meetings?|speech|videos?|updates?)\b|ప్రెస్|సమావేశం|వీడియో/;
-const RE_J_TOPIC = /\b(?:topic|subject|issue)\b|అంశం/;
+const RE_JAGAN_NAME = /\b(?:jagan|jagan sir|jaganna|leader)\b|జగన్|జగనన్న|జగన్మోహన్|నేత|నాయకుడు/;
+const RE_PRESS_CONTEXT = /\b(?:press|meets?|meetings?|speech|videos?|updates?)\b|ప్రెస్|మీట్|మీటింగ్|సమావేశం|సమావేశాలు|ప్రసంగం|వీడియో/;
+const RE_J_TOPIC = /\b(?:topic|subject|issue)\b|అంశం|విషయం/;
 const RE_J_DATE = /\b(?:date|day|when)\b|తేదీ|ఎప్పుడు/;
 
 // Main flows
-const RE_TALKING_PTS = /\b(?:talking|talkng)\s*(?:points?)?\b|\bdaily\s*(?:points?|briefing)\b|\bwhat\s+to\s+(?:say|talk)\b|టాకింగ్\s*పాయింట్స్|మాట్లాడే\s*అంశాలు|ముఖ్యాంశాలు/;
-const RE_PRAJA_SANKALP = /\b(?:praja|prajā)\s*sankalp(?:am)?\b|\bevening\s*(?:paper|edition|news)\b|ప్రజా\s*సంకల్పం|సంకల్పం/;
-const RE_PRESS_MEET = /\b(?:press|pres|media)\s*(?:meets?|meetings?|conference|schedule)\b|\bpress\s*(?:timings?|time|updates?)\b|ప్రెస్\s*మీట్|విలేకరుల\s*సమావేశం/;
-const RE_POLLS = /\b(?:opinion\s*)?(?:polls?|pols?|survey|vote|voting)\b|\bpublic\s*opinion\b|అభిప్రాయ\s*సేకరణ|పోల్|ఓటు/;
-const RE_ID_CARD = /\b(?:id|identity|member|membership)\s*(?:card|status|number|details?)?\b|\bcard\s*status\b|\bcheck\s+(?:my\s+)?(?:id|card)\b|ఐడి|ఐడీ|గుర్తింపు\s*కార్డు/;
+const RE_TALKING_PTS = /\b(?:talking|talkng)\s*(?:points?)?\b|\bdaily\s*(?:points?|briefing)\b|\bwhat\s+to\s+(?:say|talk)\b|టాకింగ్\s*పాయింట్స్|మాట్లాడే\s*(?:అంశాలు|పాయింట్లు)|ముఖ్యాంశాలు|చర్చనీయాంశాలు|పాయింట్లు/;
+const RE_PRAJA_SANKALP = /\b(?:praja|prajā)\s*sankalp(?:am)?\b|\bevening\s*(?:paper|edition|news)\b|ప్రజా\s*సంకల్పం|సంకల్పం|సాయంత్రం\s*పేపర్/;
+const RE_PRESS_MEET = /\b(?:press|pres|media)\s*(?:meets?|meetings?|conference|schedule)\b|\bpress\s*(?:timings?|time|updates?)\b|ప్రెస్\s*మీట్|ప్రెస్\s*మీటింగ్|విలేకరుల\s*సమావేశం|పత్రికా\s*సమావేశం|ప్రెస్\s*షెడ్యూల్/;
+const RE_POLLS = /\b(?:opinion\s*)?(?:polls?|pols?|survey|vote|voting)\b|\bpublic\s*opinion\b|అభిప్రాయ\s*(?:సేకరణ|పోల్)?|పోల్|పోల్స్|ఓటు|ఓటింగ్|సర్వే/;
+const RE_ID_CARD = /\b(?:id|identity|member|membership)\s*(?:card|status|number|details?)?\b|\bcard\s*status\b|\bcheck\s+(?:my\s+)?(?:id|card)\b|ఐడి|ఐడీ|గుర్తింపు\s*కార్డు|కార్డు\s*స్థితి|సభ్యత్వం|సభ్య\s*కార్డు|మెంబర్\s*షిప్/;
 
 // Media sub-types
-const RE_IMAGES = /\b(?:posters?|postrs?|images?|photos?|pictures?|graphics?)\b|పోస్టర్లు|చిత్రాలు|ఫోటోలు/;
-const RE_VIDEOS = /\b(?:reels?|reles?|short\s*videos?|videos?|clips?)\b|రీల్స్|వీడియోలు/;
+const RE_IMAGES = /\b(?:posters?|postrs?|images?|photos?|pictures?|graphics?)\b|పోస్టర్లు?|చిత్రాలు|ఫోటోలు?|బొమ్మలు/;
+const RE_VIDEOS = /\b(?:reels?|reles?|short\s*videos?|videos?|clips?)\b|రీల్స్?|వీడియోలు?/;
 const RE_MEDIA_GENERIC = /\b(?:media|shareable\s*content|social\s*content)\b|మీడియా/;
 
 // ─── Helpers ────────────────────────────────────────────────────────
@@ -58,9 +58,12 @@ function normalize(raw: string): string {
 }
 
 function dayIn(text: string): "today" | "tmrw" | "yday" | undefined {
-  if (/\b(?:yesterday|yday|previous day)\b|నిన్న/.test(text)) return "yday";
-  if (/\b(?:tomorrow|tmrw|next day)\b|రేపు/.test(text)) return "tmrw";
-  if (/\b(?:today|current|latest)\b|ఈరోజు|నేడు/.test(text)) return "today";
+  // Telugu note: "నిన్న" is a prefix of "నిన్నటి" so it covers both, but "రేపు"
+  // (with the ు sign) is NOT inside "రేపటి", and "నేటి" is distinct from "నేడు",
+  // so the oblique/colloquial forms are listed explicitly.
+  if (/\b(?:yesterday|yday|previous day)\b|నిన్న|గత\s*రోజు/.test(text)) return "yday";
+  if (/\b(?:tomorrow|tmrw|next day)\b|రేపు|రేపటి/.test(text)) return "tmrw";
+  if (/\b(?:today|current|latest)\b|ఈ\s?రోజు|నేడు|నేటి|ఇవాళ|ఇవాల/.test(text)) return "today";
   return undefined;
 }
 

@@ -9,6 +9,7 @@ import { createSampleRepositories } from "./data/sample.js";
 import { render, type PostableThread } from "./render/whatsapp.js";
 import { runAction, runText } from "./router.js";
 import { MemoryRateLimiter, RedisRateLimiter } from "./services/rateLimit.js";
+import { MemoryAnalytics, RedisAnalytics } from "./services/analytics.js";
 import { MemorySessionStore, RedisSessionStore, type SessionStore } from "./services/session.js";
 import type { FlowContext, Reply, Services } from "./types.js";
 
@@ -20,6 +21,7 @@ const useRedis = Boolean(config.redisUrl);
 const services: Services = {
   repos: createSampleRepositories(),
   rateLimit: useRedis ? new RedisRateLimiter() : new MemoryRateLimiter(),
+  analytics: useRedis ? new RedisAnalytics() : new MemoryAnalytics(),
 };
 const sessions: SessionStore = useRedis ? new RedisSessionStore() : new MemorySessionStore();
 
@@ -92,6 +94,7 @@ bot.onDirectMessage(async (thread: any, message: any) => {
   // webhook "Test" sample) must not stop the actual reply.
   await thread.markAsRead?.().catch(() => {});
   await thread.startTyping?.().catch(() => {});
+  await services.analytics.track("in:text", userId);
   const ctx = await makeContext(userId, { text });
   const reply = await runText(ctx, text);
   await rememberList(ctx, reply);
@@ -105,6 +108,7 @@ bot.onAction(async (event: any) => {
   const userId = String(event.threadId ?? thread?.id ?? event.user?.id ?? "");
   const actionId = String(event.actionId ?? event.value ?? "");
   await thread?.startTyping?.().catch(() => {});
+  await services.analytics.track("in:action", userId);
   const ctx = await makeContext(userId, { actionId });
   const reply = await runAction(ctx, actionId);
   await rememberList(ctx, reply);

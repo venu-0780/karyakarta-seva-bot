@@ -9,7 +9,8 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
-    "broadcast": "tsx scripts/broadcast.ts"
+    "broadcast": "tsx scripts/broadcast.ts",
+    "stats": "tsx --env-file-if-exists=.env scripts/stats.ts"
   },
   "dependencies": {
     "@chat-adapter/state-memory": "^4.41.1",

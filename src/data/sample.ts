@@ -15,6 +15,7 @@ import type {
   PressMeetDay,
   Repositories,
 } from "./repository.js";
+import type { ContactCard, LocationPin } from "../types.js";
 
 export const TODAY = "09 Oct 2026";
 export const YDAY = "08 Oct 2026";
@@ -53,20 +54,31 @@ const SCHEME_IMAGES = {
   arogyasri: "https://www.ysrcongress.com/sites/default/files/8.png",
 } as const;
 
+// Base path for official media on ysrcongress.com. Image-style derivatives
+// (…/styles/<name>/public/…) are resized thumbnails; dropping that segment
+// yields the full-HD original, which is what we link below.
+const YSR_FILES = "https://www.ysrcongress.com/sites/default/files";
+
 /**
- * Preview images used as menu / flow banners to make the chat feel premium.
- * `welcome` and `leader` are official photos from ysrcongress.com/en/photos;
- * `posters` / `reels` reuse the scheme posters that the media flows hand out.
+ * Preview images used as menu / flow headers to make the chat feel premium.
+ * All are official, full-resolution originals from ysrcongress.com (verified
+ * reachable). Roles are explicit so each flow gets a fitting photo.
  */
 export const BRAND_IMAGES = {
-  // Wide branded banner (party name + leaders + logo).
-  welcome: "https://www.ysrcongress.com/sites/default/files/ysrcongress.jpg",
-  // Leader greeting the crowd — used on the press-meets hub.
-  leader: "https://www.ysrcongress.com/sites/default/files/article_images/2026/09/29/a%20%2817%29.jpeg",
-  // Formal news photo (leader meeting the Governor) — used on the press-meet schedule.
-  news: "https://www.ysrcongress.com/sites/default/files/article_images/2026/09/23/WhatsApp%20Image%202026-09-23%20at%206.32.51%20PM%20%281%29.jpeg",
-  posters: SCHEME_IMAGES.rice,
-  reels: SCHEME_IMAGES.electricity,
+  // Branded party banner (name + leaders + logo) — the welcome greeting hero.
+  welcome: `${YSR_FILES}/ysrcongress.jpg`,
+  // YS Jagan, HD (Ongole visit) — leader press-meets hub header.
+  leader: `${YSR_FILES}/article_images/2026/09/29/a%20%2817%29.jpeg`,
+  // YS Jagan addressing, HD — talking-points header.
+  speech: `${YSR_FILES}/article_images/2026/09/29/a%20%2832%29_0.jpeg`,
+  // Formal news photo (leader meeting the Governor), HD — press-meet schedule.
+  news: `${YSR_FILES}/article_images/2026/09/23/WhatsApp%20Image%202026-09-23%20at%206.32.51%20PM%20%281%29.jpeg`,
+  // Recent HD party photo — Praja Sankalpam (evening paper) header.
+  paper: `${YSR_FILES}/article_images/2026/10/12/WhatsApp%20Image%202026-10-12%20at%206.26.56%20PM%20%281%29.jpeg`,
+  // Dr. YSR founder portrait — reserved for memorial / about surfaces.
+  founder: `${YSR_FILES}/ys-rajashekar-reddy-photos-1.jpg`,
+  // HD event photo — posters & reels picker header (was a low-res scheme PNG).
+  posters: `${YSR_FILES}/article_images/2026/09/29/a%20%281%29.jpeg`,
 } as const;
 
 const CLIPS: MediaItem[] = [
@@ -92,7 +104,30 @@ const POLLS: Poll[] = [
 const IDS: Record<string, MembershipRecord> = {
   "9876543210": { name: "K. Ravi Kumar", mid: "YSR-GNT-204871", ac: "Guntur West", stage: 3, where: "Guntur West constituency office (expected 12 Oct)" },
   "9123456780": { name: "P. Lakshmi Devi", mid: "YSR-NLR-118302", ac: "Nellore City", stage: 0, where: "Verification usually takes 5–7 days" },
-  "9000000001": { name: "S. Venkata Reddy", mid: "YSR-KDP-077615", ac: "Kadapa", stage: 4, where: "Kadapa district party office, 10 am – 5 pm. Bring Aadhaar or voter ID." },
+  "9000000001": {
+    name: "S. Venkata Reddy", mid: "YSR-KDP-077615", ac: "Kadapa", stage: 4,
+    where: "Kadapa district party office, 10 am – 5 pm. Bring Aadhaar or voter ID.",
+    // TODO(prod): store the real per-office coordinates in the membership DB.
+    geo: { latitude: 14.4673, longitude: 78.8242, name: "YSRCP Kadapa District Office", address: "Kadapa, Andhra Pradesh" },
+  },
+};
+
+/**
+ * Party helpline contact card handed out in Help and when a membership lookup
+ * fails. TODO(prod): replace with the real published helpline number(s).
+ */
+export const PARTY_CONTACT: ContactCard = {
+  name: "YSRCP Helpdesk",
+  org: "YSR Congress Party",
+  phones: ["+919000000000"],
+};
+
+/** Party central office pin, offered from Help (official address from the site footer). */
+export const PARTY_OFFICE: LocationPin = {
+  latitude: 16.4712,
+  longitude: 80.6039,
+  name: "YSR Congress Party — Central Office",
+  address: "Plot no. 13, Suryadevara Township, Tadepalli, Guntur Dist 522501",
 };
 
 const IMAGES: MediaItem[] = [

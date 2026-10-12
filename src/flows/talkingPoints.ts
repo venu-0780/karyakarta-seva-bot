@@ -1,25 +1,35 @@
 import type { DocEdition } from "../data/repository.js";
-import { TODAY, YDAY } from "../data/sample.js";
+import { BRAND_IMAGES, TODAY, YDAY } from "../data/sample.js";
+import { backButton, L, LB, PH, readLangPref, type LangPref } from "../services/i18n.js";
 import type { BotResponse, FlowContext, Reply } from "../types.js";
-import { BACK } from "./menu.js";
 
 /** Shared document card used by both talking points (1) and Praja Sankalpam (2). */
-export function docResponse(d: DocEdition, label: string, buttons: BotResponse["buttons"]): BotResponse {
+export function docResponse(
+  pref: LangPref,
+  d: DocEdition,
+  label: string,
+  buttons: BotResponse["buttons"],
+  headerImage?: string,
+): BotResponse {
+  const caption = `${d.pages} ${LB(pref, PH.pagesFmt)} · ${d.size} · ${d.lang}`;
   return {
-    documents: [{ filename: d.file, url: d.link, caption: `${d.pages} pages · ${d.size} · ${d.lang}` }],
-    text: `*${label}*\n${d.head}\n\nRead online: ${d.link}`,
+    documents: [{ filename: d.file, url: d.link, caption }],
+    text: `*${label}*\n${d.head}\n\n${LB(pref, PH.readOnline)}: ${d.link}`,
     buttons,
+    ...(headerImage ? { headerImage } : {}),
   };
 }
 
 // Flow 1 — Daily talking points
 export async function talkingPoints(ctx: FlowContext, which: "today" | "yday" = "today"): Promise<Reply> {
   await ctx.setState("idle");
+  const pref = readLangPref(ctx.session.data);
   const d = await ctx.services.repos.content.talkingPoints(which);
-  const label = which === "today" ? `📌 Talking points · ${TODAY}` : `📌 Talking points · ${YDAY}`;
+  const title = LB(pref, { te: "టాకింగ్ పాయింట్స్", en: "Talking points" });
+  const label = `📌 ${title} · ${which === "today" ? TODAY : YDAY}`;
   const buttons =
     which === "today"
-      ? [{ id: "tp-y", label: "Yesterday's points" }, BACK]
-      : [{ id: "tp", label: "Today's points" }, BACK];
-  return docResponse(d, label, buttons);
+      ? [{ id: "tp-y", label: LB(pref, PH.ydaysPoints) }, backButton(pref)]
+      : [{ id: "tp", label: LB(pref, PH.todaysPoints) }, backButton(pref)];
+  return docResponse(pref, d, label, buttons, BRAND_IMAGES.speech);
 }

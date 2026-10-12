@@ -54,6 +54,47 @@ export interface LinkButton {
   url: string; // must start with http(s)://
 }
 
+/**
+ * One card in an interactive media carousel. Each card shows an image OR video
+ * header (all cards in a carousel MUST share the same type) plus a single URL
+ * button. Tapping the button opens the url. See CarouselMessage.
+ */
+export interface CarouselCard {
+  /** Public HTTPS image url. Use this XOR `video`. */
+  image?: string;
+  /** Public HTTPS video url. Use this XOR `image`. */
+  video?: string;
+  /** Optional card caption. <= 160 chars, <= 2 line breaks on WhatsApp. */
+  body?: string;
+  buttonLabel: string; // <= 20 chars
+  url: string; // https cta url opened on tap
+}
+
+/**
+ * Interactive media carousel (2-10 horizontally scrollable cards). Not exposed
+ * by the adapter, so the renderer sends it via a thin direct Graph API call and
+ * falls back to sequential media messages if that is not possible.
+ */
+export interface CarouselMessage {
+  body: string; // required main body, <= 1024 chars
+  cards: CarouselCard[]; // 2-10 cards
+}
+
+/** A WhatsApp contact card the user can tap to save (helpline / coordinator). */
+export interface ContactCard {
+  name: string; // full/display name
+  phones: string[]; // E.164 numbers, e.g. "+919876543210"
+  org?: string;
+}
+
+/** A location pin (party office / ID collection center). */
+export interface LocationPin {
+  latitude: number;
+  longitude: number;
+  name?: string;
+  address?: string;
+}
+
 /** What a flow returns. The renderer may split this into several WhatsApp messages. */
 export interface BotResponse {
   text?: string; // markdown; <= 4096 chars (renderer splits if longer)
@@ -62,6 +103,9 @@ export interface BotResponse {
   documents?: DocumentAttachment[];
   media?: MediaAttachment[];
   linkButton?: LinkButton;
+  carousel?: CarouselMessage; // 2-10 media cards -> interactive media carousel
+  contacts?: ContactCard[]; // tappable contact cards (helpline / coordinator)
+  location?: LocationPin; // a map pin (sent after any text/buttons)
   // Public HTTPS preview image. On reply-button messages it renders as a native
   // image header (one bubble). On lists (WhatsApp allows only a text header) it
   // is sent as a leading image message just above the list.
@@ -96,8 +140,10 @@ export type FlowHandler = (ctx: FlowContext) => Promise<Reply>;
 // --- Service container (repositories + helpers), injected into every flow ---
 import type { Repositories } from "./data/repository.js";
 import type { RateLimiter } from "./services/rateLimit.js";
+import type { Analytics } from "./services/analytics.js";
 
 export interface Services {
   repos: Repositories;
   rateLimit: RateLimiter;
+  analytics: Analytics;
 }

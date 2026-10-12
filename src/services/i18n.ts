@@ -1,7 +1,13 @@
-import type { Lang } from "../types.js";
+import type { Button, Lang } from "../types.js";
 
 /** User-chosen reply language. `both` keeps Telugu and English together. */
 export type LangPref = Lang | "both";
+
+/** A single piece of copy in both languages. */
+export interface Phrase {
+  te: string;
+  en: string;
+}
 
 export function readLangPref(data: Record<string, unknown>): LangPref {
   return data.langPref === "en" || data.langPref === "te" || data.langPref === "both"
@@ -19,10 +25,94 @@ export function languageChoice(raw: string): LangPref | undefined {
 }
 
 /**
- * The prototype is bilingual (Telugu + English) with both shown inline, so most
- * copy is kept together rather than split by locale. This helper exists for the
- * few places we want language-specific phrasing and as the seam for a fuller
- * i18n system later.
+ * Render body copy for the user's preference. For `both` we lead with Telugu
+ * (the first language of the rural audience) and put English underneath, so a
+ * Telugu reader never has to scan past English to find their line.
+ */
+export function L(pref: LangPref, p: Phrase): string {
+  if (pref === "te") return p.te;
+  if (pref === "en") return p.en;
+  return `${p.te}\n${p.en}`;
+}
+
+/**
+ * Render a short label (button title, list row, header) in a SINGLE language —
+ * WhatsApp caps button titles at 20 chars, so `both` is not an option. Telugu
+ * unless the user explicitly chose English.
+ */
+export function LB(pref: LangPref, p: Phrase): string {
+  return pref === "en" ? p.en : p.te;
+}
+
+// --- Shared, reusable copy --------------------------------------------------
+// Kept in one place so wording and tone stay consistent across all 7 flows.
+export const PH = {
+  mainMenu: { te: "మెనూ", en: "Main menu" },
+  help: { te: "సహాయం", en: "Help" },
+  menuFooter: { te: "ఎప్పుడైనా 'మెనూ' అని టైప్ చేయండి", en: "Type menu anytime" },
+  choose: { te: "ఎంచుకోండి", en: "Choose" },
+
+  today: { te: "ఈ రోజు", en: "Today" },
+  yesterday: { te: "నిన్న", en: "Yesterday" },
+  tomorrow: { te: "రేపు", en: "Tomorrow" },
+
+  // Talking points / Praja Sankalpam
+  todaysPoints: { te: "ఈ రోజు పాయింట్లు", en: "Today's points" },
+  ydaysPoints: { te: "నిన్నటి పాయింట్లు", en: "Yesterday's points" },
+  todaysPaper: { te: "ఈ రోజు పేపర్", en: "Today's paper" },
+  ydaysPaper: { te: "నిన్నటి పేపర్", en: "Yesterday's paper" },
+  readOnline: { te: "ఆన్‌లైన్‌లో చదవండి", en: "Read online" },
+  pagesFmt: { te: "పేజీలు", en: "pages" },
+
+  // Press meets
+  watchLive: { te: "ప్రత్యక్ష ప్రసారం", en: "Watch live" },
+  liveLink: { te: "ప్రత్యక్ష లింక్", en: "Live link" },
+  watchRec: { te: "రికార్డింగ్ చూడండి", en: "Watch recording" },
+  live: { te: "🔴 ప్రత్యక్షం", en: "🔴 LIVE" },
+  upcoming: { te: "🔜 రాబోయేది", en: "🔜 Upcoming" },
+  recording: { te: "⏺ రికార్డింగ్", en: "⏺ Recording" },
+
+  // Leader press meets
+  latestMeet: { te: "తాజా ప్రెస్ మీట్", en: "Latest press meet" },
+  byDate: { te: "తేదీ వారీగా", en: "By date" },
+  byTopic: { te: "అంశం వారీగా", en: "By topic" },
+  otherTopics: { te: "ఇతర అంశాలు", en: "Other topics" },
+  watchVideo: { te: "పూర్తి వీడియో", en: "Watch full video" },
+
+  // Polls
+  vote: { te: "ఓటు వేయండి", en: "Vote" },
+  otherPolls: { te: "ఇతర పోల్స్", en: "Other polls" },
+  choosePoll: { te: "పోల్ ఎంచుకోండి", en: "Choose poll" },
+
+  // ID card
+  checkId: { te: "ఐడి చూడండి", en: "Check ID status" },
+  yesCheckId: { te: "అవును, చూడండి", en: "Yes, check ID" },
+  noMenu: { te: "వద్దు, మెనూ", en: "No, main menu" },
+  tryAnother: { te: "వేరే నంబర్", en: "Try another number" },
+  checkAnother: { te: "మరో నంబర్ చూడండి", en: "Check another number" },
+
+  // Media
+  images: { te: "ఫోటోలు / పోస్టర్లు", en: "Images / posters" },
+  reels: { te: "రీల్స్ / వీడియోలు", en: "Reels / videos" },
+  showReels: { te: "రీల్స్ చూపించు", en: "Show reels" },
+  showImages: { te: "ఫోటోలు చూపించు", en: "Show images" },
+  chooseImage: { te: "ఫోటో ఎంచుకోండి", en: "Choose image" },
+  chooseReel: { te: "రీల్ ఎంచుకోండి", en: "Choose reel" },
+} as const;
+
+/** Shared "Main menu" button, localized. Replaces the old fixed BACK constant. */
+export function backButton(pref: LangPref): Button {
+  return { id: "menu", label: LB(pref, PH.mainMenu) };
+}
+
+/** Shared "Help" button, localized. */
+export function helpButton(pref: LangPref): Button {
+  return { id: "help", label: LB(pref, PH.help) };
+}
+
+/**
+ * Legacy single-key helper kept for the few call sites that still pass a bare
+ * `Lang`. New code should prefer `L` / `LB` with a `Phrase`.
  */
 export function t(lang: Lang, key: keyof typeof STRINGS): string {
   const entry = STRINGS[key];
