@@ -18,8 +18,18 @@ export const config = {
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
     verifyToken: process.env.WHATSAPP_VERIFY_TOKEN,
     botUsername: opt("WHATSAPP_BOT_USERNAME", "praja-seva-helpdesk"),
-    // Graph API version for features the adapter doesn't expose (media carousel).
+    // Graph API version for features the adapter doesn't expose (media carousel, flows).
     graphVersion: opt("WHATSAPP_GRAPH_VERSION", "v23.0"),
+    // "published" (default) or "draft" — draft lets you test an unpublished flow.
+    flowMode: opt("WHATSAPP_FLOW_MODE", "published"),
+  },
+  // WhatsApp Business Account id — only needed by scripts/create-flow.ts.
+  wabaId: process.env.WHATSAPP_WABA_ID,
+  // Published Flow ids. When unset, the bot keeps using the button/list UI, so
+  // Flows are completely inert until you publish a flow and paste its id here.
+  flows: {
+    idStatus: process.env.ID_STATUS_FLOW_ID,
+    poll: process.env.POLL_FLOW_ID,
   },
   // Optional: when unset, the bot uses an in-memory state store (fine for local
   // dev / a single instance). Set it in production for multi-instance state.

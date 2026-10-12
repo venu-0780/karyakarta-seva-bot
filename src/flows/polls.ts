@@ -1,3 +1,4 @@
+import { config } from "../config.js";
 import type { Poll } from "../data/repository.js";
 import { backButton, L, LB, PH, readLangPref } from "../services/i18n.js";
 import type { FlowContext, ListRow, Reply } from "../types.js";
@@ -37,6 +38,25 @@ export async function pollShow(ctx: FlowContext, id: string): Promise<Reply> {
   const p = await ctx.services.repos.polls.get(id);
   if (!p) return { text: L(pref, CLOSED), buttons: [backButton(pref)] };
   if ((await ctx.services.repos.polls.hasVoted(id, ctx.userId)) != null) return pollResult(ctx, id);
+
+  // When a published WhatsApp Flow is configured, open the native poll form.
+  // The completion webhook runs vote(). Options are passed as flow data.
+  if (config.flows.poll) {
+    await ctx.setState("idle");
+    return {
+      flow: {
+        flowId: config.flows.poll,
+        token: `poll:${id}`,
+        screen: "POLL",
+        cta: LB(pref, PH.vote),
+        body: p.q.slice(0, 1024),
+        data: {
+          question: p.q,
+          options: p.opts.map((o, i) => ({ id: String(i), title: o.slice(0, 30) })),
+        },
+      },
+    };
+  }
 
   if (p.opts.length <= 3) {
     await ctx.setState("idle");

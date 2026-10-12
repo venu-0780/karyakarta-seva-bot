@@ -1,0 +1,43 @@
+{
+  "version": "7.3",
+  "screens": [
+    {
+      "id": "ID_STATUS",
+      "title": "ID Card Status / ఐడి స్థితి",
+      "terminal": true,
+      "success": true,
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "మీ నమోదిత మొబైల్ నంబర్‌తో ఐడి కార్డు స్థితి చూడండి.\nCheck your membership ID card status with your registered mobile number."
+          },
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "mobile",
+                "label": "మొబైల్ నంబర్ / Mobile number",
+                "input-type": "phone",
+                "required": true,
+                "helper-text": "10 అంకెలు / 10 digits, e.g. 9876543210"
+              },
+              {
+                "type": "Footer",
+                "label": "చూడండి / Check status",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": { "mobile": "${form.mobile}" }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

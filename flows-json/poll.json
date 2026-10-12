@@ -1,0 +1,58 @@
+{
+  "version": "7.3",
+  "screens": [
+    {
+      "id": "POLL",
+      "title": "Opinion Poll / పోల్",
+      "terminal": true,
+      "success": true,
+      "data": {
+        "question": {
+          "type": "string",
+          "__example__": "Which issue matters most in your village?"
+        },
+        "options": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": { "type": "string" },
+              "title": { "type": "string" }
+            }
+          },
+          "__example__": [
+            { "id": "0", "title": "Roads" },
+            { "id": "1", "title": "Drinking water" }
+          ]
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          { "type": "TextBody", "text": "${data.question}" },
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "RadioButtonsGroup",
+                "name": "choice",
+                "label": "ఒకటి ఎంచుకోండి / Choose one",
+                "required": true,
+                "data-source": "${data.options}"
+              },
+              {
+                "type": "Footer",
+                "label": "ఓటు / Vote",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": { "choice": "${form.choice}" }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

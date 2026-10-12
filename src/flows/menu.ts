@@ -51,6 +51,7 @@ const HELP_ROWS: MenuRow[] = [
   { id: "poll", title: { te: "అభిప్రాయ పోల్స్", en: "Opinion polls" }, desc: { te: "ఓటు వేయండి / ఫలితాలు", en: "Vote or see results" } },
   { id: "id", title: { te: "ఐడి కార్డు స్థితి", en: "ID card status" }, desc: { te: "మొబైల్ నంబర్‌తో చూడండి", en: "Check with your mobile number" } },
   { id: "media", title: { te: "పోస్టర్లు & రీల్స్", en: "Posters and reels" }, desc: { te: "ఫోటోలు, చిన్న వీడియోలు", en: "Images and short videos" } },
+  { id: "lang", title: { te: "భాష మార్చు", en: "Change language" }, desc: { te: "తెలుగు / English / రెండూ", en: "Telugu / English / Both" } },
   { id: "help", title: { te: "సహాయం", en: "Help" }, desc: { te: "ఏం టైప్ చేయవచ్చో ఉదాహరణలు", en: "Examples of what you can type" } },
 ];
 
@@ -117,7 +118,7 @@ export async function help(ctx: FlowContext): Promise<Reply> {
   return [
     {
       text: L(pref, HELP_COPY),
-      buttons: [{ id: "id", label: LB(pref, PH.checkId) }, backButton(pref)],
+      buttons: [{ id: "lang", label: "🌐 భాష / Language" }, { id: "id", label: LB(pref, PH.checkId) }, backButton(pref)],
     },
     { text: saveHint, contacts: [PARTY_CONTACT], location: PARTY_OFFICE },
   ];
@@ -127,6 +128,8 @@ export async function setLanguage(ctx: FlowContext, pref: LangPref): Promise<Rep
   ctx.session.data = { ...ctx.session.data, langPref: pref };
   ctx.lang = pref === "en" ? "en" : "te";
   await ctx.setState(ctx.session.state, ctx.session.data);
+  // Persist beyond the 24h session so the choice survives for returning users.
+  await ctx.services.prefs.set(ctx.userId, pref);
   const note =
     pref === "te"
       ? "✅ భాష తెలుగులో సెట్ అయింది."

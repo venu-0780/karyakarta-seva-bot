@@ -1,5 +1,6 @@
 import { after } from "next/server";
-import { bot } from "../../../../src/bot.js";
+import { bot, handleFlowCompletion } from "../../../../src/bot.js";
+import { parseFlowCompletion, verifySignature } from "../../../../src/services/flowWebhook.js";
 
 // Node.js runtime (not edge): the WhatsApp adapter and node-redis need Node
 // APIs. force-dynamic keeps this from ever being statically optimized, and
@@ -16,7 +17,23 @@ export async function GET(request: Request) {
 // ...and POSTs incoming messages / interactive responses (signed, verified
 // against WHATSAPP_APP_SECRET). `after` lets us return 200 fast and process async.
 export async function POST(request: Request) {
-  return bot.webhooks.whatsapp(request, {
+  // Read the raw body once so we can both (a) detect a WhatsApp Flow completion
+  // (which the adapter doesn't surface) and (b) hand an identical request to the
+  // adapter for everything else. The signature is verified against this raw body.
+  const raw = await request.text();
+  const signature = request.headers.get("x-hub-signature-256");
+
+  if (verifySignature(raw, signature)) {
+    const flow = parseFlowCompletion(raw);
+    if (flow?.from && flow.token) {
+      after(() => handleFlowCompletion(flow.from, flow.token, flow.payload));
+      return new Response(null, { status: 200 });
+    }
+  }
+
+  // Not a Flow completion (or unverifiable) -> let the adapter handle/verify it.
+  const rebuilt = new Request(request.url, { method: "POST", headers: request.headers, body: raw });
+  return bot.webhooks.whatsapp(rebuilt, {
     waitUntil: (task) => after(() => task),
   });
 }

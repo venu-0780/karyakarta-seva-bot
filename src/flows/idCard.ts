@@ -41,6 +41,22 @@ export async function idOffer(ctx: FlowContext): Promise<Reply> {
 export async function idAsk(ctx: FlowContext): Promise<Reply> {
   await ctx.setState("id");
   const pref = readLangPref(ctx.session.data);
+  // When a published WhatsApp Flow is configured, open the native form instead
+  // of asking for the number in chat. The completion webhook runs idCheck.
+  if (config.flows.idStatus) {
+    return {
+      flow: {
+        flowId: config.flows.idStatus,
+        token: "idstatus",
+        screen: "ID_STATUS",
+        cta: LB(pref, PH.checkId),
+        body: L(pref, {
+          te: "🪪 మీ ఐడి కార్డు స్థితి చూడటానికి కింది ఫారమ్ తెరవండి.",
+          en: "🪪 Open the form below to check your ID card status.",
+        }),
+      },
+    };
+  }
   return {
     text: L(pref, {
       te: "🪪 *ఐడి కార్డు స్థితి* · 2లో 2వ అడుగు\n\nమీరు నమోదు చేసిన *10 అంకెల మొబైల్ నంబర్* పంపండి.\n_ఉదాహరణ: 9876543210_",

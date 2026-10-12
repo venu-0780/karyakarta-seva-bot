@@ -7,9 +7,13 @@ import { config } from "./config.js";
 import { readLangPref } from "./services/i18n.js";
 import { createSampleRepositories } from "./data/sample.js";
 import { render, type PostableThread } from "./render/whatsapp.js";
+import { graphThread } from "./render/graphThread.js";
+import { idCheck } from "./flows/idCard.js";
+import { vote } from "./flows/polls.js";
 import { runAction, runText } from "./router.js";
 import { MemoryRateLimiter, RedisRateLimiter } from "./services/rateLimit.js";
 import { MemoryAnalytics, RedisAnalytics } from "./services/analytics.js";
+import { MemoryLanguageStore, RedisLanguageStore } from "./services/prefs.js";
 import { MemorySessionStore, RedisSessionStore, type SessionStore } from "./services/session.js";
 import type { FlowContext, Reply, Services } from "./types.js";
 
@@ -22,6 +26,7 @@ const services: Services = {
   repos: createSampleRepositories(),
   rateLimit: useRedis ? new RedisRateLimiter() : new MemoryRateLimiter(),
   analytics: useRedis ? new RedisAnalytics() : new MemoryAnalytics(),
+  prefs: useRedis ? new RedisLanguageStore() : new MemoryLanguageStore(),
 };
 const sessions: SessionStore = useRedis ? new RedisSessionStore() : new MemorySessionStore();
 
@@ -47,6 +52,12 @@ async function makeContext(
   input: { text?: string; actionId?: string },
 ): Promise<FlowContext> {
   const session = await sessions.get(userId);
+  // Seed the language from the long-lived store so a returning user (whose 24h
+  // session expired) keeps their choice and never sees the picker again.
+  if (session.data.langPref === undefined) {
+    const saved = await services.prefs.get(userId);
+    if (saved) session.data.langPref = saved;
+  }
   return {
     userId,
     text: input.text,
@@ -114,3 +125,30 @@ bot.onAction(async (event: any) => {
   await rememberList(ctx, reply);
   await render(thread as PostableThread, reply);
 });
+
+/**
+ * Handle a WhatsApp Flow completion (see services/flowWebhook.ts). The webhook
+ * route calls this for an `nfm_reply`. We rebuild the user's context, dispatch
+ * by the correlation token, and reply over a direct-Graph-API thread.
+ */
+export async function handleFlowCompletion(
+  waId: string,
+  token: string,
+  payload: Record<string, unknown>,
+): Promise<void> {
+  const ctx = await makeContext(waId, {});
+  await services.analytics.track("in:flow", waId);
+  let reply: Reply = [];
+  if (token === "idstatus") {
+    const mobile = String(payload.mobile ?? "");
+    if (mobile) reply = await idCheck(ctx, mobile);
+  } else if (token.startsWith("poll:")) {
+    const pollId = token.slice(5);
+    const choice = Number(payload.choice);
+    if (Number.isInteger(choice)) reply = await vote(ctx, pollId, choice);
+  }
+  if ((Array.isArray(reply) && reply.length === 0) || !reply) return;
+  const thread = graphThread(waId);
+  await rememberList(ctx, reply);
+  await render(thread, reply);
+}

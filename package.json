@@ -10,7 +10,8 @@
     "start": "next start",
     "typecheck": "tsc --noEmit",
     "broadcast": "tsx scripts/broadcast.ts",
-    "stats": "tsx --env-file-if-exists=.env scripts/stats.ts"
+    "stats": "tsx --env-file-if-exists=.env scripts/stats.ts",
+    "create-flow": "tsx --env-file-if-exists=.env scripts/create-flow.ts"
   },
   "dependencies": {
     "@chat-adapter/state-memory": "^4.41.1",

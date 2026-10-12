@@ -95,6 +95,22 @@ export interface LocationPin {
   address?: string;
 }
 
+/**
+ * A WhatsApp Flow invitation — opens a native in-chat form. Sent via a direct
+ * Graph API call referencing a published `flowId`. `token` correlates the
+ * completion webhook back to an action; `data` seeds the first screen.
+ */
+export interface FlowMessage {
+  flowId: string;
+  token: string; // correlation token echoed back on completion
+  screen: string; // initial screen id in the Flow JSON
+  cta: string; // button label, <= 20 chars
+  body: string; // message body shown above the button, <= 1024
+  header?: string;
+  footer?: string;
+  data?: Record<string, unknown>; // flow_action_payload data for the first screen
+}
+
 /** What a flow returns. The renderer may split this into several WhatsApp messages. */
 export interface BotResponse {
   text?: string; // markdown; <= 4096 chars (renderer splits if longer)
@@ -106,6 +122,7 @@ export interface BotResponse {
   carousel?: CarouselMessage; // 2-10 media cards -> interactive media carousel
   contacts?: ContactCard[]; // tappable contact cards (helpline / coordinator)
   location?: LocationPin; // a map pin (sent after any text/buttons)
+  flow?: FlowMessage; // opens a native WhatsApp Flow form
   // Public HTTPS preview image. On reply-button messages it renders as a native
   // image header (one bubble). On lists (WhatsApp allows only a text header) it
   // is sent as a leading image message just above the list.
@@ -141,9 +158,12 @@ export type FlowHandler = (ctx: FlowContext) => Promise<Reply>;
 import type { Repositories } from "./data/repository.js";
 import type { RateLimiter } from "./services/rateLimit.js";
 import type { Analytics } from "./services/analytics.js";
+import type { LanguageStore } from "./services/prefs.js";
 
 export interface Services {
   repos: Repositories;
   rateLimit: RateLimiter;
   analytics: Analytics;
+  /** Long-lived per-user preferences (language). Outlives the session. */
+  prefs: LanguageStore;
 }

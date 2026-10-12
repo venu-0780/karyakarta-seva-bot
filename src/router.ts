@@ -26,6 +26,7 @@ function featureOf(act: string): string {
 /** Dispatch a button/list action id to its flow (mirrors the prototype's `run`). */
 export async function runAction(ctx: FlowContext, act: string): Promise<Reply> {
   await ctx.services.analytics.track(`use:${featureOf(act)}`, ctx.userId);
+  if (act === "lang") return chooseLanguage(ctx);
   if (act === "lang-te") return setLanguage(ctx, "te");
   if (act === "lang-en") return setLanguage(ctx, "en");
   if (act === "lang-both") return setLanguage(ctx, "both");

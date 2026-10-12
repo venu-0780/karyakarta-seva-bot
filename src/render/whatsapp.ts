@@ -15,7 +15,7 @@
 import { Actions, Button, Card, LinkButton } from "chat";
 
 import { config } from "../config.js";
-import type { BotResponse, CarouselMessage, ContactCard, LocationPin, Reply } from "../types.js";
+import type { BotResponse, CarouselMessage, ContactCard, FlowMessage, LocationPin, Reply } from "../types.js";
 
 const MAX_BODY = 4096;
 const MAX_BUTTONS = 3;
@@ -285,6 +285,27 @@ async function postContacts(thread: PostableThread, contacts: ContactCard[]): Pr
   await thread.post({ markdown: lines.join("\n\n") });
 }
 
+/** Open a native WhatsApp Flow. Returns false when it can't be sent. */
+async function postFlow(thread: PostableThread, f: FlowMessage): Promise<boolean> {
+  const parameters: Record<string, unknown> = {
+    flow_message_version: "3",
+    flow_token: f.token,
+    flow_id: f.flowId,
+    flow_cta: clip(f.cta, 20) || "Open",
+    flow_action: "navigate",
+    flow_action_payload: { screen: f.screen, ...(f.data ? { data: f.data } : {}) },
+  };
+  if (config.whatsapp.flowMode === "draft") parameters.mode = "draft";
+  const interactive: Record<string, unknown> = {
+    type: "flow",
+    body: { text: clip(f.body, 1024) },
+    action: { name: "flow", parameters },
+  };
+  if (f.header) interactive.header = { type: "text", text: clip(f.header, 60) };
+  if (f.footer) interactive.footer = { text: clip(f.footer, 60) };
+  return graphSend(thread, { type: "interactive", interactive });
+}
+
 /** Send a location pin. Falls back to a Google Maps link. */
 async function postLocation(thread: PostableThread, loc: LocationPin): Promise<void> {
   const location: Record<string, unknown> = { latitude: loc.latitude, longitude: loc.longitude };
@@ -366,7 +387,16 @@ async function postHeaderImage(thread: PostableThread, url?: string): Promise<vo
 
 /** Send one BotResponse over a Chat SDK thread. */
 export async function renderOne(thread: PostableThread, r: BotResponse): Promise<void> {
-  // 0) Interactive media carousel (premium visual). Sent via a direct Graph API
+  // 0) WhatsApp Flow invitation — handled first and exclusively. Falls back to
+  // its own body text if the Flow can't be sent (e.g. unpublished id).
+  if (r.flow) {
+    if (!(await postFlow(thread, r.flow)) && r.flow.body) {
+      await thread.post({ markdown: r.flow.body });
+    }
+    return;
+  }
+
+  // 0b) Interactive media carousel (premium visual). Sent via a direct Graph API
   // call, with a sequential-media fallback. Handled first and exclusively.
   if (r.carousel?.cards?.length) {
     if (!(await postCarousel(thread, r.carousel))) {
