@@ -1,7 +1,7 @@
 import { idAsk, idCheck, idOffer, isNo, isYes } from "./flows/idCard.js";
 import { jagan, jaganByDate, jaganByTopic, jaganMeet, jaganTopic } from "./flows/jaganMeets.js";
 import { media, mediaGrid, sendMedia } from "./flows/media.js";
-import { help, menu, setLanguage } from "./flows/menu.js";
+import { chooseLanguage, help, menu, setLanguage } from "./flows/menu.js";
 import { pollResult, polls, pollShow, vote } from "./flows/polls.js";
 import { prajaSankalpam } from "./flows/prajaSankalpam.js";
 import { pressMeet, pressMeetDay } from "./flows/pressMeet.js";
@@ -26,6 +26,9 @@ function featureOf(act: string): string {
 /** Dispatch a button/list action id to its flow (mirrors the prototype's `run`). */
 export async function runAction(ctx: FlowContext, act: string): Promise<Reply> {
   await ctx.services.analytics.track(`use:${featureOf(act)}`, ctx.userId);
+  if (act === "lang-te") return setLanguage(ctx, "te");
+  if (act === "lang-en") return setLanguage(ctx, "en");
+  if (act === "lang-both") return setLanguage(ctx, "both");
   if (act === "menu") return menu(ctx);
   if (act === "help") return help(ctx);
   if (act === "tp") return talkingPoints(ctx, "today");
@@ -68,13 +71,22 @@ export async function runText(ctx: FlowContext, raw: string): Promise<Reply> {
   if (!s) return [];
   const l = s.toLowerCase();
 
+  // An explicit language word is always honored (also how the picker is answered by text).
+  const chosen = languageChoice(s);
+  if (chosen) return setLanguage(ctx, chosen);
+
+  // First run: until a language is chosen, show the picker before anything else
+  // and persist the choice for the rest of the conversation.
+  if (ctx.session.data.langPref === undefined) {
+    await ctx.services.analytics.track("use:lang-prompt", ctx.userId);
+    return chooseLanguage(ctx);
+  }
+
   if (GREETINGS.has(l)) {
     await ctx.services.analytics.track("use:menu", ctx.userId);
     return menu(ctx, { banner: true });
   }
 
-  const chosen = languageChoice(s);
-  if (chosen) return setLanguage(ctx, chosen);
   if (/^(help|\?|సహాయం|సాయం|సహాయము)$/i.test(s)) return help(ctx);
 
   // Resolve answers to the ID confirmation before looking for a new intent.

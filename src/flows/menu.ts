@@ -15,6 +15,26 @@ const PROMPT: Phrase = {
 /** The "Main menu" button reused at the bottom of most flows (mirrors prototype `back`). */
 export { backButton };
 
+/**
+ * First-run language picker. Shown once, before anything else, until the user
+ * chooses — the choice is then persisted in the session and reused for the whole
+ * conversation. Kept neutral/bilingual so a reader of either language can pick.
+ */
+export async function chooseLanguage(ctx: FlowContext): Promise<Reply> {
+  await ctx.setState(ctx.session.state);
+  return {
+    text:
+      "🌐 *భాషను ఎంచుకోండి / Choose your language*\n\n" +
+      "ఈ సంభాషణ మీరు ఎంచుకున్న భాషలో కొనసాగుతుంది.\n" +
+      "This chat will continue in the language you pick.",
+    buttons: [
+      { id: "lang-te", label: "తెలుగు" },
+      { id: "lang-en", label: "English" },
+      { id: "lang-both", label: "రెండూ / Both" },
+    ],
+  };
+}
+
 type MenuRow = { id: string; title: Phrase; desc: Phrase };
 
 const SECTION_UPDATES: Phrase = { te: "రోజువారీ అప్‌డేట్లు", en: "Daily updates" };
@@ -113,6 +133,7 @@ export async function setLanguage(ctx: FlowContext, pref: LangPref): Promise<Rep
       : pref === "en"
         ? "✅ Language set to English."
         : "✅ తెలుగు మరియు English రెండూ చూపిస్తాం.";
-  const next = await menu(ctx);
+  // Lead with the welcome hero on selection so the first screen feels premium.
+  const next = await menu(ctx, { banner: true });
   return [{ text: note }, ...(Array.isArray(next) ? next : [next])];
 }
