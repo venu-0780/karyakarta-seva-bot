@@ -39,12 +39,8 @@ export async function pollShow(ctx: FlowContext, id: string): Promise<Reply> {
   if (!p) return { text: L(pref, CLOSED), buttons: [backButton(pref)] };
   if ((await ctx.services.repos.polls.hasVoted(id, ctx.userId)) != null) return pollResult(ctx, id);
 
-  // When a published WhatsApp Flow is configured, open the native poll form.
-  // The completion webhook runs vote(). Options are passed as flow data.
-  if (config.flows.poll) {
-    await ctx.setState("idle");
-    return {
-      flow: {
+  const flow = config.flows.poll
+    ? {
         flowId: config.flows.poll,
         token: `poll:${id}`,
         screen: "POLL",
@@ -54,13 +50,13 @@ export async function pollShow(ctx: FlowContext, id: string): Promise<Reply> {
           question: p.q,
           options: p.opts.map((o, i) => ({ id: String(i), title: o.slice(0, 30) })),
         },
-      },
-    };
-  }
+      }
+    : undefined;
 
   if (p.opts.length <= 3) {
     await ctx.setState("idle");
     return {
+      ...(flow ? { flow } : {}),
       text: `*${p.q}*\n_${LB(pref, { te: "ఒక ఎంపిక నొక్కండి. ఒకసారి మాత్రమే ఓటు వేయగలరు.", en: "Tap one option. You can vote once." })}_`,
       buttons: p.opts.map((o, i) => ({ id: `vote-${id}-${i}`, label: o.slice(0, 20) })),
     };
@@ -69,6 +65,7 @@ export async function pollShow(ctx: FlowContext, id: string): Promise<Reply> {
   // 4-10 options -> list message. Also accept a typed number as a fallback.
   await ctx.setState(`poll:${id}`);
   return {
+    ...(flow ? { flow } : {}),
     text: `*${p.q}*\n${LB(pref, { te: "ఒక ఎంపిక నొక్కండి లేదా దాని నంబర్ పంపండి.", en: "Tap an option or reply with its number." })}`,
     list: {
       buttonLabel: LB(pref, PH.vote),

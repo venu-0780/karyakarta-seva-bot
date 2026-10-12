@@ -46,65 +46,40 @@ const PM: Record<"today" | "tmrw" | "yday", PressMeetDay> = {
   ]},
 };
 
+const SCHEME_IMAGES = {
+  indiramma: "https://www.ysrcongress.com/sites/default/files/6.png",
+  jalayagnam: "https://www.ysrcongress.com/sites/default/files/9.png",
+  rice: "https://www.ysrcongress.com/sites/default/files/2.png",
+  electricity: "https://www.ysrcongress.com/sites/default/files/5.png",
+  arogyasri: "https://www.ysrcongress.com/sites/default/files/8.png",
+} as const;
+
 // Base path for official media on ysrcongress.com. Image-style derivatives
 // (…/styles/<name>/public/…) are resized thumbnails; dropping that segment
 // yields the full-HD original, which is what we link below.
 const YSR_FILES = "https://www.ysrcongress.com/sites/default/files";
 
-// Official, full-resolution YS Jagan photos from ysrcongress.com. Each URL is
-// verified reachable (HTTP 200) and its pixel dimensions were measured so we
-// can pick crop-safe aspect ratios for WhatsApp (headers crop to ~1.91:1).
-//   landscapeWide  1600×648   — dynamic, crops cleanly to a banner
-//   landscape32    1599×1066  — classic 3:2, the safest hero crop
-//   landscapeHD    2560×1853  — largest/sharpest, 10-Oct event
-//   portraitRally  1153×1600  — Jagan at a rally (Ongole)
-//   portraitGov    1375×1600  — formal meeting with the Governor
-//   founderYSR     portrait   — Dr. YSR, reserved for memorial surfaces
-const PHOTOS = {
-  landscape32: `${YSR_FILES}/article_images/2026/09/29/a%20%281%29.jpeg`,
-  landscapeWide: `${YSR_FILES}/article_images/2026/09/29/a%20%2832%29_0.jpeg`,
-  landscapeHD: `${YSR_FILES}/article_images/2026/10/12/WhatsApp%20Image%202026-10-12%20at%206.26.56%20PM%20%281%29.jpeg`,
-  portraitRally: `${YSR_FILES}/article_images/2026/09/29/a%20%2817%29.jpeg`,
-  portraitGov: `${YSR_FILES}/article_images/2026/09/23/WhatsApp%20Image%202026-09-23%20at%206.32.51%20PM%20%281%29.jpeg`,
-  founderYSR: `${YSR_FILES}/ys-rajashekar-reddy-photos-1.jpg`,
-} as const;
-
-// Scheme-card imagery. The official scheme graphics on the site are only
-// 400×225 (soft on a phone card), so for a premium look "for now" each of
-// YS Jagan's flagship schemes is paired with a distinct HD photo. The card
-// title still names the scheme. TODO(prod): swap to real HD per-scheme
-// posters from the content DB.
-const SCHEME_IMAGES = {
-  indiramma: PHOTOS.landscape32,
-  jalayagnam: PHOTOS.landscapeHD,
-  rice: PHOTOS.landscapeWide,
-  electricity: PHOTOS.portraitGov,
-  arogyasri: PHOTOS.portraitRally,
-} as const;
-
 /**
- * Preview images used as menu / flow headers to make the chat feel premium.
- * All are official, full-resolution originals from ysrcongress.com (verified
- * reachable, dimensions measured). Roles are explicit so each surface gets a
- * fitting, crop-safe photo — the welcome hero and all headers are landscape so
- * WhatsApp's ~1.91:1 crop never cuts faces or text.
+ * Preview images used as menu / flow headers. Official originals from
+ * ysrcongress.com, except the welcome poster: the site banner is 1600×239,
+ * and WhatsApp crops anything wider than ~1.91:1. public/welcome-banner.jpg
+ * keeps that entire logo banner inside a 1.91:1 frame so a "hi" greeting
+ * shows every letter and face.
  */
 export const BRAND_IMAGES = {
-  // YS Jagan with karyakartas, HD 3:2 landscape — welcome greeting hero.
-  // (Replaces the old 1600×239 party banner that WhatsApp cropped to a sliver.)
-  welcome: PHOTOS.landscape32,
-  // YS Jagan addressing, HD wide landscape — leader press-meets hub header.
-  leader: PHOTOS.landscapeWide,
-  // Largest/sharpest HD landscape — talking-points header.
-  speech: PHOTOS.landscapeHD,
+  welcome: "https://karyakarta-seva-bot.vercel.app/welcome-banner.jpg",
+  // YS Jagan, HD (Ongole visit) — leader press-meets hub header.
+  leader: `${YSR_FILES}/article_images/2026/09/29/a%20%2817%29.jpeg`,
+  // YS Jagan addressing, HD — talking-points header.
+  speech: `${YSR_FILES}/article_images/2026/09/29/a%20%2832%29_0.jpeg`,
   // Formal news photo (leader meeting the Governor), HD — press-meet schedule.
-  news: PHOTOS.portraitGov,
-  // YS Jagan at a rally, HD — Praja Sankalpam (evening paper) header.
-  paper: PHOTOS.portraitRally,
+  news: `${YSR_FILES}/article_images/2026/09/23/WhatsApp%20Image%202026-09-23%20at%206.32.51%20PM%20%281%29.jpeg`,
+  // Recent HD party photo — Praja Sankalpam (evening paper) header.
+  paper: `${YSR_FILES}/article_images/2026/10/12/WhatsApp%20Image%202026-10-12%20at%206.26.56%20PM%20%281%29.jpeg`,
   // Dr. YSR founder portrait — reserved for memorial / about surfaces.
-  founder: PHOTOS.founderYSR,
-  // HD 3:2 landscape — posters & reels picker header.
-  posters: PHOTOS.landscape32,
+  founder: `${YSR_FILES}/ys-rajashekar-reddy-photos-1.jpg`,
+  // HD event photo — posters & reels picker header.
+  posters: `${YSR_FILES}/article_images/2026/09/29/a%20%281%29.jpeg`,
 } as const;
 
 const CLIPS: MediaItem[] = [

@@ -42,6 +42,8 @@ export interface PostPayload {
 export interface InteractiveSender {
   sendInteractiveMessage(threadId: string, to: string, interactive: unknown): Promise<unknown>;
   decodeThreadId(threadId: string): { userWaId: string };
+  /** Same addressing the adapter uses for buttons (phone and/or BSUID). */
+  recipient?(threadId: string, userId: string): Promise<{ to?: string; recipient?: string }>;
 }
 
 export interface PostableThread {
@@ -247,14 +249,30 @@ async function graphSend(thread: PostableThread, message: Record<string, unknown
     return false;
   }
   if (!to) return false;
+  let address: Record<string, unknown> = { to };
+  const resolveRecipient = thread.adapter?.recipient;
+  if (resolveRecipient) {
+    try {
+      const resolved = await resolveRecipient.call(thread.adapter, thread.id, to);
+      if (resolved?.to || resolved?.recipient) address = resolved;
+    } catch {
+      // Keep the phone number from the thread id.
+    }
+  }
   try {
     const res = await fetch(`https://graph.facebook.com/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
-      body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", to, ...message }),
+      body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", ...address, ...message }),
     });
-    return res.ok;
-  } catch {
+    if (!res.ok) {
+      const errText = await res.text();
+      console.error("WhatsApp graph send failed", res.status, errText.slice(0, 400));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("WhatsApp graph send failed", err instanceof Error ? err.message : "network");
     return false;
   }
 }
@@ -389,12 +407,10 @@ async function postHeaderImage(thread: PostableThread, url?: string): Promise<vo
 export async function renderOne(thread: PostableThread, r: BotResponse): Promise<void> {
   // 0) WhatsApp Flow invitation — handled first and exclusively. Falls back to
   // its own body text if the Flow can't be sent (e.g. unpublished id).
-  if (r.flow) {
-    if (!(await postFlow(thread, r.flow)) && r.flow.body) {
-      await thread.post({ markdown: r.flow.body });
-    }
-    return;
-  }
+  if (r.flow && (await postFlow(thread, r.flow))) return;
+  // Flow was missing or WhatsApp rejected it. Continue with the chat prompt
+  // on this same response (type-a-number / tap-an-option) so the user is not
+  // stuck on an "open the form" line with no form.
 
   // 0b) Interactive media carousel (premium visual). Sent via a direct Graph API
   // call, with a sequential-media fallback. Handled first and exclusively.
