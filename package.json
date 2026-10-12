@@ -1,0 +1,33 @@
+{
+  "name": "karyakarta-seva-bot",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Multi-platform conversational bot (WhatsApp-first) ported from the Karyakarta Seva prototype",
+  "type": "module",
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "broadcast": "tsx scripts/broadcast.ts"
+  },
+  "dependencies": {
+    "@chat-adapter/state-memory": "^4.41.1",
+    "@chat-adapter/state-redis": "^4.41.1",
+    "@chat-adapter/whatsapp": "^4.41.1",
+    "chat": "^4.41.1",
+    "next": "^15.0.0",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "redis": "^5.12.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "@types/react": "^19.0.0",
+    "tsx": "^4.19.0",
+    "typescript": "^5.6.0"
+  },
+  "engines": {
+    "node": ">=18.18"
+  }
+}
