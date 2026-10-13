@@ -125,8 +125,11 @@ export async function pollResult(ctx: FlowContext, id: string): Promise<Reply> {
     const lines = model.options
       .map((o) => `${o.mine ? "✅" : "▫️"} ${o.label} — *${o.votes.toLocaleString("en-IN")}* (${o.pct}%)`)
       .join("\n");
+    // Chart first (question + bars are in the image). The exact figures and the
+    // buttons follow in the next bubble, so they sit under the chart rather
+    // than repeating the question in the caption.
     return [
-      { media: [{ kind: "image", url, caption: `${header}\n_${p.q}_` }] },
+      { media: [{ kind: "image", url, caption: header }] },
       { text: lines, buttons },
     ];
   }

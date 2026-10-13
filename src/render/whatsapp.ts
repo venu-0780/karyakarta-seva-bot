@@ -15,6 +15,7 @@
 import { Actions, Button, Card, LinkButton } from "chat";
 
 import { config } from "../config.js";
+import { decodeChartData } from "../services/pollChart.js";
 import type { BotResponse, CarouselMessage, ContactCard, FlowMessage, LocationPin, Reply } from "../types.js";
 
 const MAX_BODY = 4096;
@@ -367,6 +368,59 @@ function renderListText(r: BotResponse): string {
   return lines.join("\n");
 }
 
+/** True for our own poll-chart URLs, which WhatsApp is slow to fetch by link. */
+function isPollChartUrl(url: string): boolean {
+  try {
+    return new URL(url).pathname.includes("/api/chart/poll/");
+  } catch {
+    return false;
+  }
+}
+
+/** Upload bytes to the WhatsApp media endpoint. Returns the media id. */
+async function uploadMedia(bytes: Uint8Array, mime: string, filename: string): Promise<string | undefined> {
+  const token = config.whatsapp.accessToken;
+  const phoneId = config.whatsapp.phoneNumberId;
+  if (!token || !phoneId) return undefined;
+  const form = new FormData();
+  form.append("messaging_product", "whatsapp");
+  form.append("type", mime);
+  form.append("file", new Blob([Buffer.from(bytes)], { type: mime }), filename);
+  try {
+    const res = await fetch(`https://graph.facebook.com/${config.whatsapp.graphVersion}/${phoneId}/media`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    if (!res.ok) {
+      console.error("WhatsApp media upload failed", res.status, (await res.text()).slice(0, 300));
+      return undefined;
+    }
+    const json = (await res.json()) as { id?: string };
+    return json.id || undefined;
+  } catch (err) {
+    console.error("WhatsApp media upload failed", err instanceof Error ? err.message : "network");
+    return undefined;
+  }
+}
+
+/**
+ * Render a poll chart in-process and send it by media id. WhatsApp then has
+ * the file before the message is accepted, so the numbers bubble that follows
+ * cannot jump above the chart. Returns false to fall back to a link send.
+ */
+async function postPollChart(thread: PostableThread, url: string, caption?: string): Promise<boolean> {
+  const model = decodeChartData(new URL(url).searchParams.get("d"));
+  if (!model) return false;
+  const { renderPollChartPng } = await import("./pollChartImage.js");
+  const png = await renderPollChartPng(model);
+  const id = await uploadMedia(png, "image/png", "poll-results.png");
+  if (!id) return false;
+  const image: Record<string, unknown> = { id };
+  if (caption) image.caption = clip(caption, 1024);
+  return graphSend(thread, { type: "image", image });
+}
+
 /**
  * Send one media/document as a WhatsApp attachment via public HTTPS url. Falls
  * back to posting the caption (and link) as text when there is no usable url or
@@ -377,6 +431,13 @@ async function postAttachment(
   a: { type: PostAttachment["type"]; url?: string; name?: string; mimeType?: string; caption?: string },
 ): Promise<void> {
   if (a.url && a.url.startsWith("https://")) {
+    if (a.type === "image" && isPollChartUrl(a.url)) {
+      try {
+        if (await postPollChart(thread, a.url, a.caption)) return;
+      } catch (err) {
+        console.error("Poll chart send failed", err instanceof Error ? err.message : "render");
+      }
+    }
     try {
       await thread.post({
         markdown: a.caption ?? "",
