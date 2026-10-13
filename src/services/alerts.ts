@@ -57,5 +57,5 @@ export function idReadyAlertText(record: MembershipRecord): string {
  * AlertRepo.subscribersFor("press-live") — opt-in only, per category.
  */
 export async function pressLiveSubscribers(): Promise<string[]> {
-  return ["15551234567"]; // sample recipient (E.164, no +)
+  return ["919940450062"]; // sample recipient (E.164, no +)
 }
