@@ -102,6 +102,7 @@ async function main() {
     process.exit(1);
   }
   console.log("Done.");
+  process.exit(0); // the shared Redis client would otherwise keep the process alive
 }
 
 main().catch((err) => {

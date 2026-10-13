@@ -22,6 +22,7 @@ import {
   type EscalationTicket,
 } from "./services/escalation.js";
 import { MemorySessionStore, RedisSessionStore, type SessionStore } from "./services/session.js";
+import { subscriberStore } from "./services/subscribers.js";
 import type { FlowContext, Reply, Services } from "./types.js";
 
 // --- Service container -------------------------------------------------------
@@ -127,6 +128,7 @@ bot.onDirectMessage(async (thread: any, message: any) => {
   await thread.markAsRead?.().catch(() => {});
   await thread.startTyping?.().catch(() => {});
   await services.analytics.track("in:text", userId);
+  await subscriberStore().add(userId);
   const ctx = await makeContext(userId, { text });
   const reply = await runText(ctx, text);
   await rememberList(ctx, reply);
@@ -141,6 +143,7 @@ bot.onAction(async (event: any) => {
   const actionId = String(event.actionId ?? event.value ?? "");
   await thread?.startTyping?.().catch(() => {});
   await services.analytics.track("in:action", userId);
+  await subscriberStore().add(userId);
   const ctx = await makeContext(userId, { actionId });
   const reply = await runAction(ctx, actionId);
   await rememberList(ctx, reply);
@@ -159,6 +162,7 @@ export async function handleFlowCompletion(
 ): Promise<void> {
   const ctx = await makeContext(waId, {});
   await services.analytics.track("in:flow", waId);
+  await subscriberStore().add(waId);
   let reply: Reply = [];
   if (token === "idstatus") {
     const mobile = String(payload.mobile ?? "");

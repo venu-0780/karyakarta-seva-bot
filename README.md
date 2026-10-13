@@ -34,6 +34,9 @@ docs/DESIGN.md                       full design + compliance/scale notes
   `npm run alert -- id-ready <mobile>...` push approved templates when a press
   meet goes LIVE or a membership card reaches "Ready to collect" (states already
   modeled in the data). Selection logic lives in `src/services/alerts.ts`.
+  Press-live alerts go to everyone who has messaged the bot (recorded in Redis
+  by `src/services/subscribers.ts`); on a dev app that's whoever is on the
+  Meta "To" allow list and has said hi.
 - **Poll results as a real chart image** — rendered as a PNG bar chart (Telugu +
   English) by `app/api/chart/poll/[id]/route.tsx` (next/og). Exact numbers are
   still sent as text, so results survive even if the image can't load. Disable

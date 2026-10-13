@@ -11,6 +11,7 @@
 // -----------------------------------------------------------------------------
 import type { ContentRepo, MembershipRecord, PressMeet } from "../data/repository.js";
 import { STAGES } from "../data/repository.js";
+import { subscriberStore } from "./subscribers.js";
 
 /** The stage index that means "Ready to collect" (last stage). */
 export const READY_STAGE = STAGES.length - 1;
@@ -52,10 +53,9 @@ export function idReadyAlertText(record: MembershipRecord): string {
 }
 
 /**
- * Opted-in audience for press-meet alerts. Shared by the CLI script and the
- * HTTP route so they never drift. TODO(prod): replace with
- * AlertRepo.subscribersFor("press-live") — opt-in only, per category.
+ * Audience for press-meet alerts: everyone who has messaged the bot. Shared by
+ * the CLI script and the HTTP route so they never drift.
  */
 export async function pressLiveSubscribers(): Promise<string[]> {
-  return ["919940450062"]; // sample recipient (E.164, no +)
+  return subscriberStore().all();
 }
