@@ -52,6 +52,15 @@ export const PH = {
   menuFooter: { te: "ఎప్పుడైనా 'మెనూ' అని టైప్ చేయండి", en: "Type menu anytime" },
   choose: { te: "ఎంచుకోండి", en: "Choose" },
 
+  // Shown by the LLM router when a message could mean one of a few flows.
+  clarifyPrompt: {
+    te: "మీరు వీటిలో దేని గురించి అడుగుతున్నారు? కింద ఎంచుకోండి:",
+    en: "Which of these did you mean? Tap one below:",
+  },
+
+  // Human handoff / escalation.
+  talkToCoordinator: { te: "కోఆర్డినేటర్‌తో మాట్లాడండి", en: "Talk to coordinator" },
+
   today: { te: "ఈ రోజు", en: "Today" },
   yesterday: { te: "నిన్న", en: "Yesterday" },
   tomorrow: { te: "రేపు", en: "Tomorrow" },

@@ -30,6 +30,32 @@ export function verifySignature(raw: string, header: string | null): boolean {
   return a.length === b.length && crypto.timingSafeEqual(a, b);
 }
 
+/**
+ * Collect every inbound message id (`wamid...`) in a webhook body. Used for
+ * idempotency: Meta re-delivers the same message (same id) when it doesn't get
+ * a fast 200, so we must process each id at most once. Status/delivery webhooks
+ * carry no `messages[]`, so they return nothing here.
+ */
+export function extractInboundMessageIds(raw: string): string[] {
+  let body: unknown;
+  try {
+    body = JSON.parse(raw);
+  } catch {
+    return [];
+  }
+  const ids: string[] = [];
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const entries = (body as any)?.entry ?? [];
+  for (const entry of entries) {
+    for (const change of entry?.changes ?? []) {
+      for (const msg of change?.value?.messages ?? []) {
+        if (typeof msg?.id === "string" && msg.id) ids.push(msg.id);
+      }
+    }
+  }
+  return ids;
+}
+
 /** Return the Flow completion in a webhook body, or undefined if there isn't one. */
 export function parseFlowCompletion(raw: string): FlowCompletion | undefined {
   let body: unknown;

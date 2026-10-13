@@ -9,9 +9,12 @@
     "build": "next build",
     "start": "next start",
     "typecheck": "tsc --noEmit",
+    "test": "tsx --test tests/*.test.ts",
     "broadcast": "tsx scripts/broadcast.ts",
+    "alert": "tsx --env-file-if-exists=.env scripts/alerts.ts",
     "stats": "tsx --env-file-if-exists=.env scripts/stats.ts",
-    "create-flow": "tsx --env-file-if-exists=.env scripts/create-flow.ts"
+    "create-flow": "tsx --env-file-if-exists=.env scripts/create-flow.ts",
+    "eval-router": "tsx --env-file-if-exists=.env scripts/eval-router.ts"
   },
   "dependencies": {
     "@chat-adapter/state-memory": "^4.41.1",
@@ -20,6 +23,7 @@
     "@vercel/analytics": "^2.0.1",
     "chat": "^4.41.1",
     "next": "^15.0.0",
+    "openai": "^7.32.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "redis": "^5.12.1"

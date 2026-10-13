@@ -1,6 +1,7 @@
 import { config } from "../config.js";
 import type { Poll } from "../data/repository.js";
 import { backButton, L, LB, PH, readLangPref } from "../services/i18n.js";
+import { pollChartModel, pollChartUrl } from "../services/pollChart.js";
 import type { FlowContext, ListRow, Reply } from "../types.js";
 
 const CLOSED = { te: "ఆ పోల్ ముగిసింది.", en: "That poll is closed." };
@@ -104,13 +105,33 @@ export async function vote(ctx: FlowContext, id: string, optionIndex: number): P
   ];
 }
 
-// Results as a text bar chart (WhatsApp has no native chart)
+// Poll results. Premium path: a real bar-chart image (rendered by the next/og
+// route /api/chart/poll/*) with the exact numbers underneath as text — so the
+// result is both a clean visual AND fully readable if the image can't load.
+// Set CHART_IMAGES=0 to fall back to the original inline ASCII bars.
 export async function pollResult(ctx: FlowContext, id: string): Promise<Reply> {
   const pref = readLangPref(ctx.session.data);
   const p = await ctx.services.repos.polls.get(id);
   if (!p) return { text: L(pref, CLOSED), buttons: [backButton(pref)] };
   const mine = await ctx.services.repos.polls.hasVoted(id, ctx.userId);
   const total = p.votes.reduce((a, b) => a + b, 0) || 1;
+  const votesWord = LB(pref, { te: "ఓట్లు", en: "votes" });
+  const header = `*${LB(pref, { te: "ఇప్పటి వరకు ఫలితాలు", en: "Results so far" })}* · ${total.toLocaleString("en-IN")} ${votesWord}`;
+  const buttons = [{ id: "poll", label: LB(pref, PH.otherPolls) }, backButton(pref)];
+
+  if (config.charts.enabled) {
+    const model = pollChartModel(p, mine);
+    const url = pollChartUrl(config.publicBaseUrl, p, mine);
+    const lines = model.options
+      .map((o) => `${o.mine ? "✅" : "▫️"} ${o.label} — *${o.votes.toLocaleString("en-IN")}* (${o.pct}%)`)
+      .join("\n");
+    return [
+      { media: [{ kind: "image", url, caption: `${header}\n_${p.q}_` }] },
+      { text: lines, buttons },
+    ];
+  }
+
+  // Fallback: inline ASCII bars (WhatsApp has no native chart).
   const bars = p.opts
     .map((o, i) => {
       const pc = Math.round(((p.votes[i] ?? 0) / total) * 100);
@@ -119,11 +140,7 @@ export async function pollResult(ctx: FlowContext, id: string): Promise<Reply> {
       return `${o}${mine === i ? " ✓" : ""}\n${bar} ${pc}%`;
     })
     .join("\n\n");
-  const votesWord = LB(pref, { te: "ఓట్లు", en: "votes" });
-  return {
-    text: `*${LB(pref, { te: "ఇప్పటి వరకు ఫలితాలు", en: "Results so far" })}* · ${total.toLocaleString("en-IN")} ${votesWord}\n_${p.q}_\n\n${bars}`,
-    buttons: [{ id: "poll", label: LB(pref, PH.otherPolls) }, backButton(pref)],
-  };
+  return { text: `${header}\n_${p.q}_\n\n${bars}`, buttons };
 }
 
 function toArray(r: Reply): import("../types.js").BotResponse[] {

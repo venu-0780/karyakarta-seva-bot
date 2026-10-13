@@ -8,12 +8,19 @@ import { readLangPref } from "./services/i18n.js";
 import { createSampleRepositories } from "./data/sample.js";
 import { render, type PostableThread } from "./render/whatsapp.js";
 import { graphThread } from "./render/graphThread.js";
+import { notifyCoordinator } from "./render/coordinatorNotify.js";
 import { idCheck } from "./flows/idCard.js";
 import { vote } from "./flows/polls.js";
 import { runAction, runText } from "./router.js";
 import { MemoryRateLimiter, RedisRateLimiter } from "./services/rateLimit.js";
 import { MemoryAnalytics, RedisAnalytics } from "./services/analytics.js";
 import { MemoryLanguageStore, RedisLanguageStore } from "./services/prefs.js";
+import {
+  MemoryEscalationStore,
+  RedisEscalationStore,
+  type EscalationStore,
+  type EscalationTicket,
+} from "./services/escalation.js";
 import { MemorySessionStore, RedisSessionStore, type SessionStore } from "./services/session.js";
 import type { FlowContext, Reply, Services } from "./types.js";
 
@@ -22,11 +29,25 @@ import type { FlowContext, Reply, Services } from "./types.js";
 // serverless deploys like Vercel, where in-memory state is lost between
 // invocations); in-memory otherwise so the bot still boots locally.
 const useRedis = Boolean(config.redisUrl);
+
+// Escalation: persist the ticket (Redis/memory) AND notify the coordinator over
+// WhatsApp. The notification is a platform concern, so it's composed in here —
+// flows only ever see `escalation.create`, keeping them transport-agnostic.
+const escalationStore = useRedis ? new RedisEscalationStore() : new MemoryEscalationStore();
+const escalation: EscalationStore = {
+  recent: (limit) => escalationStore.recent(limit),
+  async create(ticket: EscalationTicket) {
+    await escalationStore.create(ticket);
+    await notifyCoordinator(ticket);
+  },
+};
+
 const services: Services = {
   repos: createSampleRepositories(),
   rateLimit: useRedis ? new RedisRateLimiter() : new MemoryRateLimiter(),
   analytics: useRedis ? new RedisAnalytics() : new MemoryAnalytics(),
   prefs: useRedis ? new RedisLanguageStore() : new MemoryLanguageStore(),
+  escalation,
 };
 const sessions: SessionStore = useRedis ? new RedisSessionStore() : new MemorySessionStore();
 

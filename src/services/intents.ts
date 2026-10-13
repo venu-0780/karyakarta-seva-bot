@@ -4,23 +4,32 @@
  * This deliberately stays deterministic: WhatsApp messages are matched locally
  * without sending user text or phone numbers to an external AI service.
  */
-export type IntentAction =
-  | "tp"
-  | "tp-y"
-  | "ps"
-  | "ps-y"
-  | "pm"
-  | "pm-today"
-  | "pm-tmrw"
-  | "pm-yday"
-  | "jagan"
-  | "j-date"
-  | "j-topic"
-  | "poll"
-  | "id"
-  | "media"
-  | "media-img"
-  | "media-reel";
+/**
+ * The complete set of actions free text can resolve to. This is the single
+ * source of truth shared by the deterministic matcher below AND the LLM router
+ * (src/services/llmRouter.ts), whose structured output is constrained to this
+ * exact enum so the model can never emit anything outside the known flows.
+ */
+export const INTENT_ACTIONS = [
+  "tp",
+  "tp-y",
+  "ps",
+  "ps-y",
+  "pm",
+  "pm-today",
+  "pm-tmrw",
+  "pm-yday",
+  "jagan",
+  "j-date",
+  "j-topic",
+  "poll",
+  "id",
+  "media",
+  "media-img",
+  "media-reel",
+] as const;
+
+export type IntentAction = (typeof INTENT_ACTIONS)[number];
 
 // ─── Regex patterns (one per flow / sub-check) ─────────────────────
 // Compiled once at module load.  English alternatives use \b word

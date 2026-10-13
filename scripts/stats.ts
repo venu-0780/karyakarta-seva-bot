@@ -26,10 +26,17 @@ const FEATURE_NAMES: Record<string, string> = {
   media: "Posters & reels",
   send: "Media file sent",
   help: "Help",
+  handoff: "Human handoff",
   unmatched: "Unrecognized text",
 };
 
+// Non-"use:"/"in:" counters worth surfacing (e.g. "handoff:submit").
+const EVENT_NAMES: Record<string, string> = {
+  "handoff:submit": "Handoff submitted",
+};
+
 function label(key: string): string {
+  if (EVENT_NAMES[key]) return EVENT_NAMES[key]!;
   const [group, feature] = key.split(":");
   if (group === "in") return feature === "action" ? "Button/list taps" : "Text messages";
   if (group === "use") return FEATURE_NAMES[feature ?? ""] ?? feature ?? key;

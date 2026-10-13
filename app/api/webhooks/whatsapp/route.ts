@@ -1,6 +1,11 @@
 import { after } from "next/server";
 import { bot, handleFlowCompletion } from "../../../../src/bot.js";
-import { parseFlowCompletion, verifySignature } from "../../../../src/services/flowWebhook.js";
+import { markProcessed } from "../../../../src/services/dedup.js";
+import {
+  extractInboundMessageIds,
+  parseFlowCompletion,
+  verifySignature,
+} from "../../../../src/services/flowWebhook.js";
 
 // Node.js runtime (not edge): the WhatsApp adapter and node-redis need Node
 // APIs. force-dynamic keeps this from ever being statically optimized, and
@@ -24,6 +29,17 @@ export async function POST(request: Request) {
   const signature = request.headers.get("x-hub-signature-256");
 
   if (verifySignature(raw, signature)) {
+    // Idempotency: Meta re-delivers the same message id until it gets a 200.
+    // Mark each inbound id once; if every message here is a repeat, ack and stop
+    // so we never reply twice or call the LLM twice for one user message.
+    const ids = extractInboundMessageIds(raw);
+    if (ids.length > 0) {
+      const fresh = await Promise.all(ids.map(markProcessed));
+      if (fresh.every((isNew) => !isNew)) {
+        return new Response(null, { status: 200 });
+      }
+    }
+
     const flow = parseFlowCompletion(raw);
     if (flow?.from && flow.token) {
       after(() => handleFlowCompletion(flow.from, flow.token, flow.payload));

@@ -25,11 +25,47 @@ export const config = {
   },
   // WhatsApp Business Account id — only needed by scripts/create-flow.ts.
   wabaId: process.env.WHATSAPP_WABA_ID,
+  // Public HTTPS base URL of this deployment. Used to build absolute URLs for
+  // assets WhatsApp must fetch itself (e.g. the generated poll-result chart
+  // image at /api/chart/poll/*). Defaults to the known Vercel domain.
+  publicBaseUrl: opt("PUBLIC_BASE_URL", "https://karyakarta-seva-bot.vercel.app"),
+  // Human handoff / escalation. When COORDINATOR_WA_ID is set (and WhatsApp
+  // creds are present), an unresolved query the user chooses to escalate is
+  // forwarded to this coordinator's WhatsApp with the conversation context.
+  coordinator: {
+    waId: process.env.COORDINATOR_WA_ID,
+  },
+  // Shared secret that guards the proactive-alert HTTP routes (app/api/alerts/*).
+  // Required to trigger an alert over HTTP; when unset, those routes refuse all
+  // requests (so a deploy can never expose an open broadcast trigger).
+  alertsSecret: process.env.ALERTS_SECRET,
+  // Poll results are rendered as a real bar-chart image by default. Set
+  // CHART_IMAGES=0 to fall back to the inline text/ASCII bars (e.g. if the
+  // deployment can't serve the image route).
+  charts: {
+    enabled: opt("CHART_IMAGES", "1") !== "0",
+  },
   // Published Flow ids. When unset, the bot keeps using the button/list UI, so
   // Flows are completely inert until you publish a flow and paste its id here.
   flows: {
     idStatus: process.env.ID_STATUS_FLOW_ID,
     poll: process.env.POLL_FLOW_ID,
+  },
+  // LLM smart router (OpenAI). Fully inert until OPENAI_API_KEY is set — the bot
+  // then falls back to the deterministic regex matcher exactly as before. The
+  // LLM only ever classifies free text into one of the known flow actions; it
+  // never generates content and never receives phone numbers / PII.
+  llm: {
+    apiKey: process.env.OPENAI_API_KEY,
+    model: opt("OPENAI_MODEL", "gpt-4o-mini"),
+    enabled: Boolean(process.env.OPENAI_API_KEY),
+    timeoutMs: Number(opt("LLM_TIMEOUT_MS", "2500")),
+    // Per-user cap so a stuck/abusive sender can't run up unbounded API cost.
+    callsPerHour: Number(opt("LLM_CALLS_PER_HOUR", "30")),
+    // Grounded answers: when a user ASKS about content (not just navigates), add
+    // a short summary built only from retrieved repo data. Costs a 2nd LLM call;
+    // on by default when the key is set, disable with GROUNDED_ANSWERS=0.
+    answersEnabled: Boolean(process.env.OPENAI_API_KEY) && opt("GROUNDED_ANSWERS", "1") !== "0",
   },
   // Optional: when unset, the bot uses an in-memory state store (fine for local
   // dev / a single instance). Set it in production for multi-instance state.
@@ -42,6 +78,10 @@ export const config = {
   templates: {
     talkingPoints: opt("TEMPLATE_TALKING_POINTS", "talking_points_daily"),
     prajaSankalpam: opt("TEMPLATE_PRAJA_SANKALPAM", "praja_sankalpam_daily"),
+    // Proactive-alert templates (see scripts/alerts.ts). Must be pre-approved in
+    // WhatsApp Manager before they can be sent outside the 24h service window.
+    pressLive: opt("TEMPLATE_PRESS_LIVE", "press_meet_live"),
+    idReady: opt("TEMPLATE_ID_READY", "id_card_ready"),
   },
 } as const;
 

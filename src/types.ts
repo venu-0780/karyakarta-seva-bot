@@ -159,6 +159,7 @@ import type { Repositories } from "./data/repository.js";
 import type { RateLimiter } from "./services/rateLimit.js";
 import type { Analytics } from "./services/analytics.js";
 import type { LanguageStore } from "./services/prefs.js";
+import type { EscalationStore } from "./services/escalation.js";
 
 export interface Services {
   repos: Repositories;
@@ -166,4 +167,6 @@ export interface Services {
   analytics: Analytics;
   /** Long-lived per-user preferences (language). Outlives the session. */
   prefs: LanguageStore;
+  /** Human handoff: persists a ticket and notifies the coordinator. */
+  escalation: EscalationStore;
 }

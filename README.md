@@ -22,8 +22,24 @@ src/render/whatsapp.ts               BotResponse → Chat SDK posts (WhatsApp li
 src/data/*                           repository interfaces + sample data
 src/services/*                       session, rate limit, i18n
 scripts/broadcast.ts                 scheduled 7AM/6PM template pushes
+scripts/alerts.ts                    proactive alerts (press LIVE / ID ready)
 docs/DESIGN.md                       full design + compliance/scale notes
 ```
+
+## Premium extras (beyond the 7 flows)
+- **Human handoff** — when the bot can't help (or the member asks for a person /
+  files a complaint), it offers to route the query to a coordinator. The ticket
+  is stored and forwarded to `COORDINATOR_WA_ID` over WhatsApp with context.
+- **Proactive alerts** — `npm run alert -- press-live` and
+  `npm run alert -- id-ready <mobile>...` push approved templates when a press
+  meet goes LIVE or a membership card reaches "Ready to collect" (states already
+  modeled in the data). Selection logic lives in `src/services/alerts.ts`.
+- **Poll results as a real chart image** — rendered as a PNG bar chart (Telugu +
+  English) by `app/api/chart/poll/[id]/route.tsx` (next/og). Exact numbers are
+  still sent as text, so results survive even if the image can't load. Disable
+  with `CHART_IMAGES=0`.
+- **Tests** — `npm test` runs the routing, renderer, classifier, chart, alert,
+  and intent-matching unit tests (Node's test runner via tsx, no network).
 
 ## The 7 flows
 1. Daily talking points · 2. Praja Sankalpam · 3. Press meet schedule · 4. Jagan Sir press meets ·
@@ -35,6 +51,7 @@ All run end-to-end on the sample data in `src/data/sample.ts`.
 cp .env.example .env     # fill in the 4 WHATSAPP_* values (see below)
 npm install
 npm run typecheck        # expects deps installed
+npm test                 # unit tests (routing / renderer / classifier / charts)
 npm run dev              # serves the webhook at /api/webhooks/whatsapp (port 3000)
 ```
 State uses an **in-memory store by default** (no Redis needed for local dev / a single
