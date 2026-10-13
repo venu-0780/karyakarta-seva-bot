@@ -24,7 +24,7 @@ import crypto from "node:crypto";
 import { config } from "../../../../src/config.js";
 import { createSampleRepositories } from "../../../../src/data/sample.js";
 import { liveMeetAlertText, liveMeets, pressLiveSubscribers } from "../../../../src/services/alerts.js";
-import { sendTemplateMessage } from "../../../../src/render/sendTemplate.js";
+import { sendTemplateMessage, sendTextMessage } from "../../../../src/render/sendTemplate.js";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -58,18 +58,31 @@ export async function POST(request: Request): Promise<Response> {
   const audience = await pressLiveSubscribers();
   let sent = 0;
   let failed = 0;
+  let mode: "session" | "template" | undefined;
+  let error: string | undefined;
   for (const item of live) {
     const bodyText = liveMeetAlertText(item);
     for (const to of audience) {
-      const ok = await sendTemplateMessage(to, {
-        name: config.templates.pressLive,
-        language: config.broadcastLang,
-        bodyParams: [bodyText],
-      });
-      if (ok) sent++;
-      else failed++;
+      // Someone who messaged the bot in the last 24h can receive a normal
+      // message — no approved template required. Fall back to the template
+      // only when WhatsApp says the window is closed.
+      let result = await sendTextMessage(to, bodyText);
+      if (!result.ok) {
+        result = await sendTemplateMessage(to, {
+          name: config.templates.pressLive,
+          language: config.broadcastLang,
+          bodyParams: [bodyText],
+        });
+      }
+      if (result.ok) {
+        sent++;
+        mode = result.mode;
+      } else {
+        failed++;
+        error = result.error;
+      }
     }
   }
 
-  return Response.json({ live: live.length, recipients: audience.length, sent, failed });
+  return Response.json({ live: live.length, recipients: audience.length, sent, failed, ...(mode ? { mode } : {}), ...(error ? { error } : {}) });
 }

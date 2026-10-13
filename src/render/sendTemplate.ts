@@ -20,16 +20,18 @@ export interface TemplateMessage {
   bodyParams?: string[];
 }
 
-/** Send one template message to a wa_id (digits, no +). Never throws. */
-export async function sendTemplateMessage(toWaId: string, tpl: TemplateMessage): Promise<boolean> {
+export interface SendResult {
+  ok: boolean;
+  /** How the message was delivered, when ok. */
+  mode?: "session" | "template";
+  /** Graph API error message, when not ok. Safe to show; contains no secrets. */
+  error?: string;
+}
+
+async function graphMessage(toWaId: string, message: Record<string, unknown>): Promise<SendResult> {
   const token = config.whatsapp.accessToken;
   const phoneId = config.whatsapp.phoneNumberId;
-  if (!token || !phoneId || !toWaId) return false;
-
-  const components = tpl.bodyParams?.length
-    ? [{ type: "body", parameters: tpl.bodyParams.map((text) => ({ type: "text", text })) }]
-    : [];
-
+  if (!token || !phoneId || !toWaId) return { ok: false, error: "WhatsApp credentials are not configured" };
   try {
     const res = await fetch(`https://graph.facebook.com/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
       method: "POST",
@@ -38,21 +40,51 @@ export async function sendTemplateMessage(toWaId: string, tpl: TemplateMessage):
         messaging_product: "whatsapp",
         recipient_type: "individual",
         to: toWaId,
-        type: "template",
-        template: {
-          name: tpl.name,
-          language: { code: tpl.language },
-          ...(components.length ? { components } : {}),
-        },
+        ...message,
       }),
     });
     if (!res.ok) {
-      console.error("WhatsApp template send failed", res.status, (await res.text()).slice(0, 400));
-      return false;
+      const body = (await res.text()).slice(0, 500);
+      console.error("WhatsApp send failed", res.status, body);
+      let error = body;
+      try {
+        const parsed = JSON.parse(body) as { error?: { message?: string } };
+        if (parsed.error?.message) error = parsed.error.message;
+      } catch {
+        // keep the raw body
+      }
+      return { ok: false, error };
     }
-    return true;
+    return { ok: true };
   } catch (err) {
-    console.error("WhatsApp template send failed", err instanceof Error ? err.message : "network");
-    return false;
+    const error = err instanceof Error ? err.message : "network";
+    console.error("WhatsApp send failed", error);
+    return { ok: false, error };
   }
+}
+
+/**
+ * Free-form text. Delivers only inside the 24h service window (the person has
+ * messaged the bot recently). Outside that window WhatsApp rejects it and the
+ * caller should fall back to an approved template.
+ */
+export async function sendTextMessage(toWaId: string, body: string): Promise<SendResult> {
+  const result = await graphMessage(toWaId, { type: "text", text: { body } });
+  return result.ok ? { ...result, mode: "session" } : result;
+}
+
+/** Send one approved template to a wa_id (digits, no +). Never throws. */
+export async function sendTemplateMessage(toWaId: string, tpl: TemplateMessage): Promise<SendResult> {
+  const components = tpl.bodyParams?.length
+    ? [{ type: "body", parameters: tpl.bodyParams.map((text) => ({ type: "text", text })) }]
+    : [];
+  const result = await graphMessage(toWaId, {
+    type: "template",
+    template: {
+      name: tpl.name,
+      language: { code: tpl.language },
+      ...(components.length ? { components } : {}),
+    },
+  });
+  return result.ok ? { ...result, mode: "template" } : result;
 }
