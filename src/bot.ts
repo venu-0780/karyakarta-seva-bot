@@ -22,6 +22,7 @@ import {
   type EscalationTicket,
 } from "./services/escalation.js";
 import { MemorySessionStore, RedisSessionStore, type SessionStore } from "./services/session.js";
+import { usableDisplayName } from "./services/displayName.js";
 import { subscriberStore } from "./services/subscribers.js";
 import type { FlowContext, Reply, Services } from "./types.js";
 
@@ -118,6 +119,13 @@ async function rememberList(ctx: FlowContext, reply: Reply): Promise<void> {
   await sessions.set(ctx.userId, ctx.session);
 }
 
+/** Keep the WhatsApp profile name on the session so the welcome can use it. */
+function rememberDisplayName(ctx: FlowContext, raw: unknown): void {
+  const name = usableDisplayName(raw);
+  if (!name || ctx.session.data.displayName === name) return;
+  ctx.session.data = { ...ctx.session.data, displayName: name };
+}
+
 // --- Handlers ----------------------------------------------------------------
 // Direct message (text). The prototype is a 1:1 DM bot.
 bot.onDirectMessage(async (thread: any, message: any) => {
@@ -130,6 +138,7 @@ bot.onDirectMessage(async (thread: any, message: any) => {
   await services.analytics.track("in:text", userId);
   await subscriberStore().add(userId);
   const ctx = await makeContext(userId, { text });
+  rememberDisplayName(ctx, message.author?.fullName ?? message.author?.userName);
   const reply = await runText(ctx, text);
   await rememberList(ctx, reply);
   await render(thread as PostableThread, reply);
@@ -145,6 +154,7 @@ bot.onAction(async (event: any) => {
   await services.analytics.track("in:action", userId);
   await subscriberStore().add(userId);
   const ctx = await makeContext(userId, { actionId });
+  rememberDisplayName(ctx, event.user?.fullName ?? event.user?.userName);
   const reply = await runAction(ctx, actionId);
   await rememberList(ctx, reply);
   await render(thread as PostableThread, reply);

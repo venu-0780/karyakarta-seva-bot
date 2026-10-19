@@ -2,10 +2,19 @@ import { BRAND_IMAGES, PARTY_CONTACT, PARTY_OFFICE } from "../data/sample.js";
 import { backButton, L, LB, PH, readLangPref, type LangPref, type Phrase } from "../services/i18n.js";
 import type { FlowContext, ListRow, Reply } from "../types.js";
 
-const GREETING: Phrase = {
-  te: "🙏 నమస్కారం! *ప్రజా సేవ కేంద్రం*కు స్వాగతం.",
-  en: "🙏 Welcome to the *Praja Seva Helpdesk*.",
-};
+function greeting(pref: LangPref, data: Record<string, unknown>): string {
+  const name = typeof data.displayName === "string" ? data.displayName : "";
+  const phrase: Phrase = name
+    ? {
+        te: `🙏 నమస్కారం *${name}*! *ప్రజా సేవ కేంద్రం*కు స్వాగతం.`,
+        en: `🙏 Welcome, *${name}*, to the *Praja Seva Helpdesk*.`,
+      }
+    : {
+        te: "🙏 నమస్కారం! *ప్రజా సేవ కేంద్రం*కు స్వాగతం.",
+        en: "🙏 Welcome to the *Praja Seva Helpdesk*.",
+      };
+  return L(pref, phrase);
+}
 
 const PROMPT: Phrase = {
   te: "*ఎంచుకోండి* నొక్కండి, లేదా 1 నుండి 7 వరకు నంబర్ పంపండి.",
@@ -68,7 +77,7 @@ export async function menu(ctx: FlowContext, opts?: { banner?: boolean }): Promi
   await ctx.setState("idle");
   const pref = readLangPref(ctx.session.data);
   const list: Reply = {
-    text: opts?.banner ? L(pref, PROMPT) : `${L(pref, GREETING)}\n${L(pref, PROMPT)}`,
+    text: opts?.banner ? L(pref, PROMPT) : `${greeting(pref, ctx.session.data)}\n${L(pref, PROMPT)}`,
     list: {
       buttonLabel: LB(pref, PH.choose),
       header: "Praja Seva Helpdesk",
@@ -82,7 +91,7 @@ export async function menu(ctx: FlowContext, opts?: { banner?: boolean }): Promi
   // Hero image (greeting on the caption) first, then the menu list just below.
   if (opts?.banner) {
     return [
-      { media: [{ kind: "image", url: BRAND_IMAGES.welcome, caption: L(pref, GREETING) }] },
+      { media: [{ kind: "image", url: BRAND_IMAGES.welcome, caption: greeting(pref, ctx.session.data) }] },
       list,
     ];
   }

@@ -19,6 +19,13 @@ test("greeting shows the welcome banner + menu list", async () => {
   assert.ok(reply.some((r) => r.list), "has the menu list");
 });
 
+test("greeting uses the WhatsApp profile name when one was saved", async () => {
+  const ctx = makeContext({ data: { displayName: "Ravi Kumar" } });
+  const reply = arr(await runText(ctx, "hi"));
+  const caption = reply.find((r) => r.media?.length)?.media?.[0]?.caption ?? "";
+  assert.match(caption, /Welcome, \*Ravi Kumar\*/);
+});
+
 test("numeric shortcut 3 opens the press-meet day picker", async () => {
   const ctx = makeContext();
   const reply = await runText(ctx, "3");
