@@ -6,8 +6,8 @@ function greeting(pref: LangPref, data: Record<string, unknown>): string {
   const name = typeof data.displayName === "string" ? data.displayName : "";
   const phrase: Phrase = name
     ? {
-        te: `🙏 నమస్కారం *${name}*! *ప్రజా సేవ కేంద్రం*కు స్వాగతం.`,
-        en: `🙏 Welcome, *${name}*, to the *Praja Seva Helpdesk*.`,
+        te: `🙏 నమస్కారం **${name}**! *ప్రజా సేవ కేంద్రం*కు స్వాగతం.`,
+        en: `🙏 Welcome, **${name}**, to the *Praja Seva Helpdesk*.`,
       }
     : {
         te: "🙏 నమస్కారం! *ప్రజా సేవ కేంద్రం*కు స్వాగతం.",

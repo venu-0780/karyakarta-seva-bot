@@ -67,7 +67,7 @@ const YSR_FILES = "https://www.ysrcongress.com/sites/default/files";
  * shows every letter and face.
  */
 export const BRAND_IMAGES = {
-  welcome: "https://karyakarta-seva-bot.vercel.app/welcome-banner.jpg",
+  welcome: "https://karyakarta-seva-bot.vercel.app/welcome-banner.jpg?v=20261020",
   // YS Jagan, HD (Ongole visit) — leader press-meets hub header.
   leader: `${YSR_FILES}/article_images/2026/09/29/a%20%2817%29.jpeg`,
   // YS Jagan addressing, HD — talking-points header.
