@@ -12,7 +12,7 @@ async function graphPost(message: Record<string, unknown>): Promise<void> {
   const phoneId = config.whatsapp.phoneNumberId;
   if (!token || !phoneId) return;
   try {
-    await fetch(`https://graph.facebook.com/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
+    await fetch(`${config.whatsapp.apiUrl}/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", ...message }),

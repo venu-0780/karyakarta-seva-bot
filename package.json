@@ -14,6 +14,7 @@
     "alert": "tsx --env-file-if-exists=.env scripts/alerts.ts",
     "stats": "tsx --env-file-if-exists=.env scripts/stats.ts",
     "create-flow": "tsx --env-file-if-exists=.env scripts/create-flow.ts",
+    "test-whatsapp": "tsx --env-file-if-exists=.env scripts/test-whatsapp.ts",
     "eval-router": "tsx --env-file-if-exists=.env scripts/eval-router.ts"
   },
   "dependencies": {

@@ -18,6 +18,8 @@ export const config = {
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
     verifyToken: process.env.WHATSAPP_VERIFY_TOKEN,
     botUsername: opt("WHATSAPP_BOT_USERNAME", "praja-seva-helpdesk"),
+    // Meta-compatible API origin. Some BSP/CRM providers proxy the Graph API.
+    apiUrl: opt("WHATSAPP_API_URL", "https://graph.facebook.com").replace(/\/+$/, ""),
     // Graph API version for features the adapter doesn't expose (media carousel, flows).
     graphVersion: opt("WHATSAPP_GRAPH_VERSION", "v23.0"),
     // "published" (default) or "draft" — draft lets you test an unpublished flow.
@@ -25,6 +27,7 @@ export const config = {
   },
   // WhatsApp Business Account id — only needed by scripts/create-flow.ts.
   wabaId: process.env.WHATSAPP_WABA_ID,
+  businessId: process.env.WHATSAPP_BUSINESS_ID,
   // Public HTTPS base URL of this deployment. Used to build absolute URLs for
   // assets WhatsApp must fetch itself (e.g. the generated poll-result chart
   // image at /api/chart/poll/*). Defaults to the known Vercel domain.

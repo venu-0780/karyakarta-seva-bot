@@ -64,7 +64,10 @@ const state = config.redisUrl
 export const bot = new Chat({
   userName: config.whatsapp.botUsername,
   adapters: {
-    whatsapp: createWhatsAppAdapter(),
+    whatsapp: createWhatsAppAdapter({
+      apiUrl: config.whatsapp.apiUrl,
+      apiVersion: config.whatsapp.graphVersion,
+    }),
   },
   state,
 });

@@ -261,7 +261,7 @@ async function graphSend(thread: PostableThread, message: Record<string, unknown
     }
   }
   try {
-    const res = await fetch(`https://graph.facebook.com/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
+    const res = await fetch(`${config.whatsapp.apiUrl}/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", ...address, ...message }),
@@ -387,7 +387,7 @@ async function uploadMedia(bytes: Uint8Array, mime: string, filename: string): P
   form.append("type", mime);
   form.append("file", new Blob([Buffer.from(bytes)], { type: mime }), filename);
   try {
-    const res = await fetch(`https://graph.facebook.com/${config.whatsapp.graphVersion}/${phoneId}/media`, {
+    const res = await fetch(`${config.whatsapp.apiUrl}/${config.whatsapp.graphVersion}/${phoneId}/media`, {
       method: "POST",
       headers: { Authorization: `Bearer ${token}` },
       body: form,

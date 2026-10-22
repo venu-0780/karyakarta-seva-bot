@@ -33,7 +33,7 @@ async function graphMessage(toWaId: string, message: Record<string, unknown>): P
   const phoneId = config.whatsapp.phoneNumberId;
   if (!token || !phoneId || !toWaId) return { ok: false, error: "WhatsApp credentials are not configured" };
   try {
-    const res = await fetch(`https://graph.facebook.com/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
+    const res = await fetch(`${config.whatsapp.apiUrl}/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
       method: "POST",
       headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
       body: JSON.stringify({

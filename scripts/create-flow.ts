@@ -15,7 +15,7 @@ import { dirname, resolve } from "node:path";
 
 import { config } from "../src/config.js";
 
-const API = `https://graph.facebook.com/${config.whatsapp.graphVersion}`;
+const API = `${config.whatsapp.apiUrl}/${config.whatsapp.graphVersion}`;
 const TOKEN = config.whatsapp.accessToken;
 const WABA = config.wabaId;
 
