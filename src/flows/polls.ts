@@ -1,4 +1,4 @@
-import { config } from "../config.js";
+import { config, thanksSticker } from "../config.js";
 import type { Poll } from "../data/repository.js";
 import { backButton, L, LB, PH, readLangPref } from "../services/i18n.js";
 import { pollChartModel, pollChartUrl } from "../services/pollChart.js";
@@ -94,8 +94,11 @@ export async function vote(ctx: FlowContext, id: string, optionIndex: number): P
       ...toArray(await pollResult(ctx, id)),
     ];
   }
+  const sticker = thanksSticker();
   return [
     {
+      reactionEmoji: "✅",
+      ...(sticker ? { sticker } : {}),
       text: L(pref, {
         te: `✅ ధన్యవాదాలు! *${p.opts[optionIndex]}* కు మీ ఓటు నమోదైంది.`,
         en: `✅ Thank you! Your vote for *${p.opts[optionIndex]}* is recorded.`,
@@ -117,7 +120,11 @@ export async function pollResult(ctx: FlowContext, id: string): Promise<Reply> {
   const total = p.votes.reduce((a, b) => a + b, 0) || 1;
   const votesWord = LB(pref, { te: "ఓట్లు", en: "votes" });
   const header = `*${LB(pref, { te: "ఇప్పటి వరకు ఫలితాలు", en: "Results so far" })}* · ${total.toLocaleString("en-IN")} ${votesWord}`;
-  const buttons = [{ id: "poll", label: LB(pref, PH.otherPolls) }, backButton(pref)];
+  const buttons = [
+    { id: "poll", label: LB(pref, PH.otherPolls) },
+    ...(config.flows.survey ? [{ id: "survey", label: LB(pref, { te: "రేట్ చేయండి", en: "Rate the bot" }) }] : []),
+    backButton(pref),
+  ];
 
   if (config.charts.enabled) {
     const model = pollChartModel(p, mine);

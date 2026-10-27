@@ -1,4 +1,5 @@
 import { BRAND_IMAGES, TODAY, TMRW, YDAY } from "../data/sample.js";
+import { eventInvite } from "./events.js";
 import { backButton, L, LB, PH, readLangPref, type LangPref, type Phrase } from "../services/i18n.js";
 import type { Button, FlowContext, Reply } from "../types.js";
 
@@ -59,5 +60,7 @@ export async function pressMeetDay(ctx: FlowContext, day: "today" | "tmrw" | "yd
     .filter((k) => k !== day)
     .map((k) => ({ id: `pm-${k}`, label: LB(pref, DAY_WORD[k]) }));
 
-  return { text: body, buttons: [...others, backButton(pref)] };
+  const schedule = { text: body, buttons: [...others, backButton(pref)] };
+  const invite = eventInvite(ctx);
+  return invite ? [schedule, invite] : schedule;
 }

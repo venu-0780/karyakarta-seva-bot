@@ -1,0 +1,133 @@
+{
+  "version": "7.3",
+  "screens": [
+    {
+      "id": "TYPE",
+      "title": "Feedback / అభిప్రాయం",
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "మీ సందేశం రకాన్ని ఎంచుకోండి.\nChoose what this message is about."
+          },
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "RadioButtonsGroup",
+                "name": "category",
+                "label": "రకం / Type",
+                "required": true,
+                "data-source": [
+                  { "id": "complaint", "title": "ఫిర్యాదు / Complaint" },
+                  { "id": "suggestion", "title": "సూచన / Suggestion" },
+                  { "id": "feedback", "title": "అభిప్రాయం / Feedback" }
+                ]
+              },
+              {
+                "type": "Footer",
+                "label": "తర్వాత / Next",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": { "type": "screen", "name": "DETAILS" },
+                  "payload": { "category": "${form.category}" }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "DETAILS",
+      "title": "Details / వివరాలు",
+      "data": {
+        "category": { "type": "string", "__example__": "complaint" }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "TextArea",
+                "name": "details",
+                "label": "వివరాలు / What happened?",
+                "required": true,
+                "helper-text": "ఒకటి లేదా రెండు వాక్యాలు / A sentence or two"
+              },
+              {
+                "type": "Footer",
+                "label": "తర్వాత / Next",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": { "type": "screen", "name": "CONTACT" },
+                  "payload": {
+                    "category": "${data.category}",
+                    "details": "${form.details}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "CONTACT",
+      "title": "Contact / సంప్రదింపు",
+      "terminal": true,
+      "success": true,
+      "data": {
+        "category": { "type": "string", "__example__": "complaint" },
+        "details": { "type": "string", "__example__": "Road repair is pending" }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "RadioButtonsGroup",
+                "name": "callback",
+                "label": "మిమ్మల్ని ఎలా సంప్రదించాలి? / How should we reply?",
+                "required": true,
+                "data-source": [
+                  { "id": "whatsapp", "title": "WhatsApp" },
+                  { "id": "call", "title": "ఫోన్ కాల్ / Phone call" }
+                ]
+              },
+              {
+                "type": "TextInput",
+                "name": "phone",
+                "label": "ఫోన్ (ఐచ్చికం) / Phone (optional)",
+                "input-type": "phone",
+                "required": false
+              },
+              {
+                "type": "Footer",
+                "label": "పంపండి / Submit",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "category": "${data.category}",
+                    "details": "${data.details}",
+                    "callback": "${form.callback}",
+                    "phone": "${form.phone}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

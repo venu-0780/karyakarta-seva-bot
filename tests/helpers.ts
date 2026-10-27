@@ -7,6 +7,7 @@
 import { createSampleRepositories } from "../src/data/sample.js";
 import { MemoryAnalytics } from "../src/services/analytics.js";
 import { MemoryEscalationStore } from "../src/services/escalation.js";
+import { MemorySubmissionStore } from "../src/services/submissions.js";
 import { MemoryLanguageStore } from "../src/services/prefs.js";
 import { MemoryRateLimiter } from "../src/services/rateLimit.js";
 import type { FlowContext, Services, Session } from "../src/types.js";
@@ -20,6 +21,7 @@ export function makeServices(): Services & { escalation: MemoryEscalationStore }
     analytics: new MemoryAnalytics(),
     prefs: new MemoryLanguageStore(),
     escalation,
+    submissions: new MemorySubmissionStore(),
   };
 }
 

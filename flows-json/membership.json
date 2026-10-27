@@ -1,0 +1,103 @@
+{
+  "version": "7.3",
+  "screens": [
+    {
+      "id": "WHO",
+      "title": "Membership / సభ్యత్వం",
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "ఐడి కార్డు దరఖాస్తు.\nApply for a membership ID card."
+          },
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "name",
+                "label": "పూర్తి పేరు / Full name",
+                "required": true
+              },
+              {
+                "type": "TextInput",
+                "name": "phone",
+                "label": "మొబైల్ / Mobile",
+                "input-type": "phone",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "తర్వాత / Next",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": { "type": "screen", "name": "PLACE" },
+                  "payload": {
+                    "name": "${form.name}",
+                    "phone": "${form.phone}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "PLACE",
+      "title": "Address / చిరునామా",
+      "terminal": true,
+      "success": true,
+      "data": {
+        "name": { "type": "string", "__example__": "Ravi Kumar" },
+        "phone": { "type": "string", "__example__": "9876543210" }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "constituency",
+                "label": "నియోజకవర్గం / Constituency",
+                "required": true
+              },
+              {
+                "type": "TextArea",
+                "name": "address",
+                "label": "చిరునామా / Address",
+                "required": true
+              },
+              {
+                "type": "OptIn",
+                "name": "consent",
+                "label": "సంప్రదించడానికి అంగీకరిస్తున్నాను / I agree to be contacted",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "దరఖాస్తు / Apply",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "name": "${data.name}",
+                    "phone": "${data.phone}",
+                    "constituency": "${form.constituency}",
+                    "address": "${form.address}",
+                    "consent": "${form.consent}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

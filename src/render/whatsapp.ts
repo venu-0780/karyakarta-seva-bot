@@ -11,6 +11,10 @@
 //   - list of 4-10 rows          -> native WhatsApp list message
 //   - list send failure          -> numbered text; a typed number still selects the row
 //   - documents / media          -> attachments by public HTTPS url (link passthrough)
+//   - audio / sticker            -> direct Graph API (adapter has no send for these)
+//   - location request           -> interactive location_request_message
+//   - rich cta_url header        -> interactive cta_url with image/video/document
+//   - emoji reaction             -> type=reaction on the inbound message id
 // -----------------------------------------------------------------------------
 import { Actions, Button, Card, LinkButton } from "chat";
 
@@ -154,6 +158,41 @@ export function whatsAppListPayload(r: BotResponse): Record<string, unknown> | u
   );
 }
 
+/**
+ * Native cta_url payload with a media header. Undefined unless the link has an
+ * https URL and an https header asset — plain links stay on the Chat SDK card.
+ */
+export function whatsAppCtaPayload(r: BotResponse): Record<string, unknown> | undefined {
+  const link = r.linkButton;
+  const header = link?.header;
+  if (!link || !isHttps(link.url) || !header || !isHttps(header.url)) return undefined;
+  if (r.buttons?.length) return undefined;
+  const media =
+    header.type === "video"
+      ? { type: "video", video: { link: header.url } }
+      : header.type === "document"
+        ? { type: "document", document: { link: header.url } }
+        : { type: "image", image: { link: header.url } };
+  return {
+    type: "cta_url",
+    header: media,
+    body: { text: clip(r.text || link.label, 1024) },
+    action: {
+      name: "cta_url",
+      parameters: { display_text: clip(link.label, MAX_BUTTON_TITLE) || "Open", url: link.url },
+    },
+  };
+}
+
+/** Native "send location" prompt. The user's pin arrives later as a webhook. */
+export function whatsAppLocationRequestPayload(body: string): Record<string, unknown> {
+  return {
+    type: "location_request_message",
+    body: { text: clip(body || "Share your location", 1024) },
+    action: { name: "send_location" },
+  };
+}
+
 /** Reply-button payload for 1-3 choices. A link button stays on the card path. */
 export function whatsAppButtonPayload(r: BotResponse): Record<string, unknown> | undefined {
   const buttons = r.buttons ?? [];
@@ -238,6 +277,35 @@ function buildCarouselCards(c: CarouselMessage): unknown[] | undefined {
  * thread and posts the given message body. Returns false on any missing
  * prerequisite or non-2xx response so callers can fall back gracefully.
  */
+/**
+ * Mark an inbound message read and show the typing indicator in one call.
+ * Best-effort: a missing id or a rejected request must not block the reply.
+ */
+export async function markReadAndType(messageId: string): Promise<void> {
+  const token = config.whatsapp.accessToken;
+  const phoneId = config.whatsapp.phoneNumberId;
+  if (!token || !phoneId || !messageId) return;
+  try {
+    const res = await fetch(`${config.whatsapp.apiUrl}/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "User-Agent": "karyakarta-seva-bot/1.0",
+      },
+      body: JSON.stringify({
+        messaging_product: "whatsapp",
+        status: "read",
+        message_id: messageId,
+        typing_indicator: { type: "text" },
+      }),
+    });
+    if (!res.ok) console.error("WhatsApp read/typing failed", res.status);
+  } catch (err) {
+    console.error("WhatsApp read/typing failed", err instanceof Error ? err.message : "network");
+  }
+}
+
 async function graphSend(thread: PostableThread, message: Record<string, unknown>): Promise<boolean> {
   const token = config.whatsapp.accessToken;
   const phoneId = config.whatsapp.phoneNumberId;
@@ -280,6 +348,25 @@ async function graphSend(thread: PostableThread, message: Record<string, unknown
     console.error("WhatsApp graph send failed", err instanceof Error ? err.message : "network");
     return false;
   }
+}
+
+async function postSticker(thread: PostableThread, url: string): Promise<void> {
+  if (!isHttps(url)) return;
+  await graphSend(thread, { type: "sticker", sticker: { link: url } });
+}
+
+async function postAudio(thread: PostableThread, url: string): Promise<void> {
+  if (isHttps(url) && (await graphSend(thread, { type: "audio", audio: { link: url } }))) return;
+  if (url) await thread.post({ markdown: url });
+}
+
+async function postLocationRequest(thread: PostableThread, body: string): Promise<boolean> {
+  return graphSend(thread, { type: "interactive", interactive: whatsAppLocationRequestPayload(body) });
+}
+
+async function sendReaction(thread: PostableThread, messageId: string, emoji: string): Promise<void> {
+  if (!messageId || !emoji) return;
+  await graphSend(thread, { type: "reaction", reaction: { message_id: messageId, emoji } });
 }
 
 /** Send an interactive media carousel. Returns false when it can't be built/sent. */
@@ -486,6 +573,27 @@ export async function renderOne(thread: PostableThread, r: BotResponse): Promise
     return;
   }
 
+  if (r.sticker?.url) await postSticker(thread, r.sticker.url);
+  if (r.audio?.url) await postAudio(thread, r.audio.url);
+
+  // A location request already contains its own body. On success, skip the
+  // duplicate text bubble and only attach pins / contacts that follow.
+  if (r.locationRequest && (await postLocationRequest(thread, r.locationRequest.body))) {
+    if (r.location) await postLocation(thread, r.location);
+    if (r.contacts?.length) await postContacts(thread, r.contacts);
+    return;
+  }
+
+  // Rich CTA (image / video / document header). Plain links stay on the card path.
+  if (r.linkButton?.header) {
+    const cta = whatsAppCtaPayload(r);
+    if (cta && (await graphSend(thread, { type: "interactive", interactive: cta }))) {
+      if (r.location) await postLocation(thread, r.location);
+      if (r.contacts?.length) await postContacts(thread, r.contacts);
+      return;
+    }
+  }
+
   // 1) Documents — one file per post; caption rides on the first.
   if (r.documents?.length) {
     for (const [i, d] of r.documents.entries()) {
@@ -563,12 +671,25 @@ const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms
 // can visibly arrive above the welcome banner.
 const MEDIA_ORDER_DELAY_MS = 2500;
 
+export interface RenderOptions {
+  /** Inbound wamid to react to, when a response sets reactionEmoji. */
+  inboundMessageId?: string;
+}
+
 /** Send a Reply (one response or an ordered sequence). */
-export async function render(thread: PostableThread, reply: Reply): Promise<void> {
+export async function render(
+  thread: PostableThread,
+  reply: Reply,
+  opts?: RenderOptions,
+): Promise<void> {
   const list = Array.isArray(reply) ? reply : [reply];
+  const emoji = list.find((r) => r.reactionEmoji)?.reactionEmoji;
+  if (emoji && opts?.inboundMessageId) await sendReaction(thread, opts.inboundMessageId, emoji);
   for (const [i, r] of list.entries()) {
     await renderOne(thread, r);
-    const sentMedia = Boolean(r.media?.length || r.carousel?.cards?.length || r.location || r.contacts?.length);
+    const sentMedia = Boolean(
+      r.media?.length || r.carousel?.cards?.length || r.location || r.contacts?.length || r.audio || r.sticker,
+    );
     if (sentMedia && i < list.length - 1) await sleep(MEDIA_ORDER_DELAY_MS);
   }
 }

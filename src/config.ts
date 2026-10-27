@@ -24,7 +24,7 @@ export const config = {
     // Meta-compatible API origin. Some BSP/CRM providers proxy the Graph API.
     apiUrl: opt("WHATSAPP_API_URL", "https://graph.facebook.com").replace(/\/+$/, ""),
     // Graph API version for features the adapter doesn't expose (media carousel, flows).
-    graphVersion: opt("WHATSAPP_GRAPH_VERSION", "v23.0"),
+    graphVersion: opt("WHATSAPP_GRAPH_VERSION", "v26.0"),
     // "published" (default) or "draft" — draft lets you test an unpublished flow.
     flowMode: opt("WHATSAPP_FLOW_MODE", "published"),
   },
@@ -56,6 +56,15 @@ export const config = {
   flows: {
     idStatus: process.env.ID_STATUS_FLOW_ID,
     poll: process.env.POLL_FLOW_ID,
+    feedback: process.env.FEEDBACK_FLOW_ID,
+    event: process.env.EVENT_FLOW_ID,
+    membership: process.env.MEMBERSHIP_FLOW_ID,
+    survey: process.env.SURVEY_FLOW_ID,
+  },
+  // Optional branded sticker (WebP, 512x512). Sent on thank-you messages only
+  // when set to a public https URL. Leave blank to skip stickers entirely.
+  stickers: {
+    thanks: process.env.STICKER_THANKS_URL,
   },
   // LLM smart router (OpenAI). Fully inert until OPENAI_API_KEY is set — the bot
   // then falls back to the deterministic regex matcher exactly as before. The
@@ -90,5 +99,11 @@ export const config = {
     idReady: opt("TEMPLATE_ID_READY", "id_card_ready"),
   },
 } as const;
+
+/** Public https thank-you sticker, or undefined when none is configured. */
+export function thanksSticker(): { url: string } | undefined {
+  const url = config.stickers.thanks;
+  return url?.startsWith("https://") ? { url } : undefined;
+}
 
 export { req };

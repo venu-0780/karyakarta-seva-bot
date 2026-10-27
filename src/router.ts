@@ -1,4 +1,7 @@
 import { escalationOffer, escalationStart, escalationSubmit, wantsHuman } from "./flows/handoff.js";
+import { membershipAsk } from "./flows/membership.js";
+import { askLocation } from "./flows/nearest.js";
+import { surveyAsk } from "./flows/survey.js";
 import { idAsk, idCheck, idOffer, isNo, isYes } from "./flows/idCard.js";
 import { jagan, jaganByDate, jaganByTopic, jaganMeet, jaganTopic } from "./flows/jaganMeets.js";
 import { media, mediaGrid, sendMedia } from "./flows/media.js";
@@ -61,6 +64,10 @@ export async function runAction(ctx: FlowContext, act: string): Promise<Reply> {
 
   if (act === "id" || act === "id-yes") return idAsk(ctx);
 
+  if (act === "near") return askLocation(ctx);
+  if (act === "survey") return surveyAsk(ctx);
+  if (act === "join") return membershipAsk(ctx);
+
   if (act === "media") return media(ctx);
   if (act === "media-img") return mediaGrid(ctx, "img");
   if (act === "media-reel") return mediaGrid(ctx, "reel");
@@ -89,6 +96,7 @@ const ACTION_LABELS: Partial<Record<IntentAction, Phrase>> = {
   poll: { te: "అభిప్రాయ పోల్స్", en: "Opinion polls" },
   id: { te: "ఐడి స్థితి", en: "ID status" },
   media: { te: "పోస్టర్లు / రీల్స్", en: "Posters / reels" },
+  near: { te: "దగ్గరి కార్యాలయం", en: "Nearest office" },
   "media-img": { te: "పోస్టర్లు", en: "Posters" },
   "media-reel": { te: "రీల్స్", en: "Reels" },
 };
@@ -380,6 +388,10 @@ export async function runText(ctx: FlowContext, raw: string): Promise<Reply> {
 
   // A phone-number-looking message anywhere -> ID lookup
   if (/^\+?[\d\s-]{10,14}$/.test(s)) return idCheck(ctx, s);
+
+  // Waiting for a shared location pin. Any other text re-shows the prompt,
+  // unless an intent above already took them somewhere else.
+  if (ctx.session.state === "near") return askLocation(ctx);
 
   // Explicit ask for a person / to raise a complaint -> start the handoff. Runs
   // only after every content intent, number, and list selection above, so it

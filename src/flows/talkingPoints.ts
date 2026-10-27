@@ -10,14 +10,16 @@ export function docResponse(
   label: string,
   buttons: BotResponse["buttons"],
   headerImage?: string,
-): BotResponse {
+): Reply {
   const caption = `${d.pages} ${LB(pref, PH.pagesFmt)} · ${d.size} · ${d.lang}`;
-  return {
+  const card: BotResponse = {
     documents: [{ filename: d.file, url: d.link, caption }],
     text: `*${label}*\n${d.head}\n\n${LB(pref, PH.readOnline)}: ${d.link}`,
     buttons,
     ...(headerImage ? { headerImage } : {}),
   };
+  if (d.audioUrl?.startsWith("https://")) return [{ audio: { url: d.audioUrl } }, card];
+  return card;
 }
 
 // Flow 1 — Daily talking points

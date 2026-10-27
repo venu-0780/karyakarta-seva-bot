@@ -10,6 +10,7 @@
 // the renderer. The coordinator-facing WhatsApp send is injected via the
 // escalation service wired in src/bot.ts.
 // -----------------------------------------------------------------------------
+import { config } from "../config.js";
 import { PARTY_CONTACT } from "../data/sample.js";
 import { makeTicket } from "../services/escalation.js";
 import { backButton, helpButton, L, LB, PH, readLangPref } from "../services/i18n.js";
@@ -39,7 +40,7 @@ export async function escalationStart(ctx: FlowContext): Promise<Reply> {
   await ctx.setState("handoff", ctx.session.data);
   await ctx.services.analytics.track("use:handoff", ctx.userId);
   const pref = readLangPref(ctx.session.data);
-  return {
+  const chat = {
     text: L(pref, {
       te:
         "🧑‍💼 *కోఆర్డినేటర్ సహాయం*\n\n" +
@@ -49,6 +50,20 @@ export async function escalationStart(ctx: FlowContext): Promise<Reply> {
         "Type your question or problem in one message. We'll pass it to your area coordinator, who will get back to you.",
     }),
     buttons: [backButton(pref)],
+  };
+  if (!config.flows.feedback) return chat;
+  return {
+    ...chat,
+    flow: {
+      flowId: config.flows.feedback,
+      token: "feedback",
+      screen: "TYPE",
+      cta: LB(pref, { te: "ఫారమ్ తెరవండి", en: "Open form" }),
+      body: L(pref, {
+        te: "🧑‍💼 *కోఆర్డినేటర్ సహాయం*\n\nఫిర్యాదు, సూచన లేదా అభిప్రాయం కింద ఫారమ్‌లో పంపండి.",
+        en: "🧑‍💼 *Coordinator help*\n\nSend a complaint, suggestion, or note with the form below.",
+      }),
+    },
   };
 }
 

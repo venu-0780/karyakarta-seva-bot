@@ -1,6 +1,7 @@
 import { after } from "next/server";
 import { handleFlowCompletion, handleWhatApiWebhook } from "../../../../src/bot.js";
 import { markProcessed } from "../../../../src/services/dedup.js";
+import { parseStatusUpdates, recordDeliveries } from "../../../../src/services/delivery.js";
 import {
   extractInboundMessageIds,
   parseFlowCompletion,
@@ -72,6 +73,9 @@ export async function POST(request: Request) {
       return plain("OK");
     }
   }
+
+  const statuses = parseStatusUpdates(raw);
+  if (statuses.length) after(() => recordDeliveries(statuses));
 
   const flow = parseFlowCompletion(raw);
   if (flow?.from && flow.token) {

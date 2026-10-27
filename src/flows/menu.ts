@@ -17,8 +17,8 @@ function greeting(pref: LangPref, data: Record<string, unknown>): string {
 }
 
 const PROMPT: Phrase = {
-  te: "*ఎంచుకోండి* నొక్కండి, లేదా 1 నుండి 7 వరకు నంబర్ పంపండి.",
-  en: "Tap *Choose*, or reply with a number from 1 to 7.",
+  te: "*ఎంచుకోండి* నొక్కండి, లేదా నంబర్ పంపండి.",
+  en: "Tap *Choose*, or reply with the number of your choice.",
 };
 
 /** The "Main menu" button reused at the bottom of most flows (mirrors prototype `back`). */
@@ -60,6 +60,7 @@ const HELP_ROWS: MenuRow[] = [
   { id: "poll", title: { te: "అభిప్రాయ పోల్స్", en: "Opinion polls" }, desc: { te: "ఓటు వేయండి / ఫలితాలు", en: "Vote or see results" } },
   { id: "id", title: { te: "ఐడి కార్డు స్థితి", en: "ID card status" }, desc: { te: "మొబైల్ నంబర్‌తో చూడండి", en: "Check with your mobile number" } },
   { id: "media", title: { te: "పోస్టర్లు & రీల్స్", en: "Posters and reels" }, desc: { te: "ఫోటోలు, చిన్న వీడియోలు", en: "Images and short videos" } },
+  { id: "near", title: { te: "దగ్గరి కార్యాలయం", en: "Nearest office" }, desc: { te: "మీ లొకేషన్ పంపండి", en: "Share your location" } },
   { id: "lang", title: { te: "భాష మార్చు", en: "Change language" }, desc: { te: "తెలుగు / English / రెండూ", en: "Telugu / English / Both" } },
   { id: "help", title: { te: "సహాయం", en: "Help" }, desc: { te: "ఏం టైప్ చేయవచ్చో ఉదాహరణలు", en: "Examples of what you can type" } },
 ];
@@ -105,7 +106,8 @@ const HELP_COPY: Phrase = {
     "• _నేటి టాకింగ్ పాయింట్స్_\n" +
     "• _రేపటి ప్రెస్ మీట్_\n" +
     "• _నా ఐడి స్థితి_\n" +
-    "• _పోస్టర్లు చూపించు_\n\n" +
+    "• _పోస్టర్లు చూపించు_\n" +
+    "• _దగ్గరి కార్యాలయం_\n\n" +
     "భాష మార్చాలంటే *English* లేదా *రెండూ* అని పంపండి.",
   en:
     "*Help*\n\n" +
@@ -113,7 +115,8 @@ const HELP_COPY: Phrase = {
     "• _today's talking points_\n" +
     "• _tomorrow's press meet_\n" +
     "• _my ID status_\n" +
-    "• _show posters_\n\n" +
+    "• _show posters_\n" +
+    "• _nearest office_\n\n" +
     "Change language by typing *Telugu* or *both*.",
 };
 
@@ -145,7 +148,8 @@ export async function setLanguage(ctx: FlowContext, pref: LangPref): Promise<Rep
       : pref === "en"
         ? "✅ Language set to English."
         : "✅ తెలుగు మరియు English రెండూ చూపిస్తాం.";
+  const confirmed = { text: note, reactionEmoji: "👍" };
   // Lead with the welcome hero on selection so the first screen feels premium.
   const next = await menu(ctx, { banner: true });
-  return [{ text: note }, ...(Array.isArray(next) ? next : [next])];
+  return [confirmed, ...(Array.isArray(next) ? next : [next])];
 }

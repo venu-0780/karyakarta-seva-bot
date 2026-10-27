@@ -1,0 +1,84 @@
+{
+  "version": "7.3",
+  "screens": [
+    {
+      "id": "RATE",
+      "title": "Rate / రేటింగ్",
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "ఈ హెల్ప్‌డెస్క్ ఎంత ఉపయోగంగా ఉంది?\nHow useful is this helpdesk?"
+          },
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "RadioButtonsGroup",
+                "name": "rating",
+                "label": "రేటింగ్ / Rating",
+                "required": true,
+                "data-source": [
+                  { "id": "5", "title": "5 — చాలా బాగుంది / Excellent" },
+                  { "id": "4", "title": "4 — బాగుంది / Good" },
+                  { "id": "3", "title": "3 — సరే / Okay" },
+                  { "id": "2", "title": "2 — మెరుగు కావాలి / Needs work" },
+                  { "id": "1", "title": "1 — ఉపయోగం లేదు / Not useful" }
+                ]
+              },
+              {
+                "type": "Footer",
+                "label": "తర్వాత / Next",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": { "type": "screen", "name": "NOTE" },
+                  "payload": { "rating": "${form.rating}" }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "NOTE",
+      "title": "Comment / వ్యాఖ్య",
+      "terminal": true,
+      "success": true,
+      "data": {
+        "rating": { "type": "string", "__example__": "5" }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "TextArea",
+                "name": "comment",
+                "label": "మరింత చెప్పండి (ఐచ్చికం) / Anything else? (optional)",
+                "required": false
+              },
+              {
+                "type": "Footer",
+                "label": "పంపండి / Send",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "rating": "${data.rating}",
+                    "comment": "${form.comment}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

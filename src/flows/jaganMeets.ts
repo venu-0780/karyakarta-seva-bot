@@ -108,7 +108,15 @@ export async function jaganMeet(ctx: FlowContext, id: string): Promise<Reply> {
         (m.link.startsWith("http") ? "" : `${fullVideo}: ${m.link}\n\n`) +
         reelsLbl,
       ...(m.link.startsWith("http")
-        ? { linkButton: { label: LB(pref, PH.watchVideo), url: m.link } }
+        ? {
+            linkButton: {
+              label: LB(pref, PH.watchVideo),
+              url: m.link,
+              ...(m.link.startsWith("https://")
+                ? { header: { type: "image" as const, url: BRAND_IMAGES.leader } }
+                : {}),
+            },
+          }
         : {}),
     },
   ];

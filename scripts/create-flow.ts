@@ -84,7 +84,16 @@ async function main() {
   await post(`${API}/${flowId}/publish`, "");
   console.log("  published.");
 
-  const envVar = file.includes("poll") ? "POLL_FLOW_ID" : "ID_STATUS_FLOW_ID";
+  const envByFile: Record<string, string> = {
+    "id-status": "ID_STATUS_FLOW_ID",
+    poll: "POLL_FLOW_ID",
+    feedback: "FEEDBACK_FLOW_ID",
+    "event-register": "EVENT_FLOW_ID",
+    membership: "MEMBERSHIP_FLOW_ID",
+    survey: "SURVEY_FLOW_ID",
+  };
+  const stem = file.replace(/\.json$/, "");
+  const envVar = envByFile[stem] ?? "FLOW_ID";
   console.log(`\n✅ Done. Add this to your .env (and Vercel env):\n   ${envVar}=${flowId}\n`);
   process.exit(0);
 }

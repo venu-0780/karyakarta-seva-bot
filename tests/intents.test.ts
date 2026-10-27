@@ -13,6 +13,7 @@ test("detectIntent maps clear phrasings to the right action", () => {
     ["press meet schedule", "pm"],
     ["opinion polls", "poll"],
     ["check my id status", "id"],
+    ["nearest office", "near"],
     ["show posters", "media-img"],
     ["reels", "media-reel"],
     ["jagan sir press meet", "jagan"],

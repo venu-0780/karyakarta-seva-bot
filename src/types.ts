@@ -52,6 +52,11 @@ export interface MediaAttachment {
 export interface LinkButton {
   label: string; // <= 20 chars
   url: string; // must start with http(s)://
+  /**
+   * When set, the renderer sends a native cta_url message with this media
+   * header (image, video, or document) instead of a plain link button.
+   */
+  header?: { type: "image" | "video" | "document"; url: string };
 }
 
 /**
@@ -123,6 +128,17 @@ export interface BotResponse {
   contacts?: ContactCard[]; // tappable contact cards (helpline / coordinator)
   location?: LocationPin; // a map pin (sent after any text/buttons)
   flow?: FlowMessage; // opens a native WhatsApp Flow form
+  /** Emoji reaction applied to the inbound message that triggered this reply. */
+  reactionEmoji?: string;
+  /** Voice note / audio clip (public https URL). Sent as its own bubble. */
+  audio?: { url: string };
+  /** Sticker (public https .webp). Skipped when the URL is missing or the send fails. */
+  sticker?: { url: string };
+  /**
+   * Asks the user to share their location (native "Send location" button).
+   * The body is the message text. A shared pin comes back as a location webhook.
+   */
+  locationRequest?: { body: string };
   // Public HTTPS preview image. On reply-button messages it renders as a native
   // image header (one bubble). On lists (WhatsApp allows only a text header) it
   // is sent as a leading image message just above the list.
@@ -160,6 +176,7 @@ import type { RateLimiter } from "./services/rateLimit.js";
 import type { Analytics } from "./services/analytics.js";
 import type { LanguageStore } from "./services/prefs.js";
 import type { EscalationStore } from "./services/escalation.js";
+import type { SubmissionStore } from "./services/submissions.js";
 
 export interface Services {
   repos: Repositories;
@@ -169,4 +186,6 @@ export interface Services {
   prefs: LanguageStore;
   /** Human handoff: persists a ticket and notifies the coordinator. */
   escalation: EscalationStore;
+  /** Structured form submissions (events, membership, surveys, feedback). */
+  submissions: SubmissionStore;
 }

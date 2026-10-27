@@ -1,0 +1,109 @@
+{
+  "version": "7.3",
+  "screens": [
+    {
+      "id": "WHO",
+      "title": "Register / నమోదు",
+      "data": {},
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "TextBody",
+            "text": "ప్రెస్ మీట్‌కు హాజరు నమోదు చేయండి.\nRegister to attend a press meet."
+          },
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "name",
+                "label": "పేరు / Your name",
+                "required": true
+              },
+              {
+                "type": "TextInput",
+                "name": "phone",
+                "label": "మొబైల్ / Mobile",
+                "input-type": "phone",
+                "required": true
+              },
+              {
+                "type": "Footer",
+                "label": "తర్వాత / Next",
+                "on-click-action": {
+                  "name": "navigate",
+                  "next": { "type": "screen", "name": "EVENT" },
+                  "payload": {
+                    "name": "${form.name}",
+                    "phone": "${form.phone}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "id": "EVENT",
+      "title": "Event / కార్యక్రమం",
+      "terminal": true,
+      "success": true,
+      "data": {
+        "name": { "type": "string", "__example__": "Ravi" },
+        "phone": { "type": "string", "__example__": "9876543210" }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          {
+            "type": "Form",
+            "name": "form",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "constituency",
+                "label": "నియోజకవర్గం / Constituency",
+                "required": true
+              },
+              {
+                "type": "TextInput",
+                "name": "attendees",
+                "label": "ఎంత మంది వస్తారు? / How many people?",
+                "input-type": "number",
+                "required": true
+              },
+              {
+                "type": "RadioButtonsGroup",
+                "name": "slot",
+                "label": "ఏ రోజు? / Which day?",
+                "required": true,
+                "data-source": [
+                  { "id": "today", "title": "ఈ రోజు / Today" },
+                  { "id": "tomorrow", "title": "రేపు / Tomorrow" },
+                  { "id": "either", "title": "ఏదైనా / Either" }
+                ]
+              },
+              {
+                "type": "Footer",
+                "label": "నమోదు / Register",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "name": "${data.name}",
+                    "phone": "${data.phone}",
+                    "constituency": "${form.constituency}",
+                    "attendees": "${form.attendees}",
+                    "slot": "${form.slot}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}

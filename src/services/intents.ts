@@ -27,6 +27,7 @@ export const INTENT_ACTIONS = [
   "media",
   "media-img",
   "media-reel",
+  "near",
 ] as const;
 
 export type IntentAction = (typeof INTENT_ACTIONS)[number];
@@ -53,6 +54,8 @@ const RE_ID_CARD = /\b(?:id|identity|member|membership)\s*(?:card|status|number|
 const RE_IMAGES = /\b(?:posters?|postrs?|images?|photos?|pictures?|graphics?)\b|పోస్టర్లు?|చిత్రాలు|ఫోటోలు?|బొమ్మలు/;
 const RE_VIDEOS = /\b(?:reels?|reles?|short\s*videos?|videos?|clips?)\b|రీల్స్?|వీడియోలు?/;
 const RE_MEDIA_GENERIC = /\b(?:media|shareable\s*content|social\s*content)\b|మీడియా/;
+const RE_NEAR =
+  /\b(?:nearest|nearby|closest)\b(?:\s+\w+){0,3}\s+\b(?:office|centre|center)\b|\bparty\s+office\b|\bwhere\s+is\s+the\s+office\b|\boffice\s+(?:location|address)\b|దగ్గరలోని\s*కార్యాలయం|పార్టీ\s*కార్యాలయం|కార్యాలయం\s*ఎక్కడ|దగ్గరి\s*కార్యాలయం/;
 
 // ─── Helpers ────────────────────────────────────────────────────────
 
@@ -102,6 +105,7 @@ export function detectIntent(raw: string): IntentAction | undefined {
   }
 
   if (RE_POLLS.test(text)) return "poll";
+  if (RE_NEAR.test(text)) return "near";
   if (RE_ID_CARD.test(text)) return "id";
 
   // Media: detect sub-type when possible.

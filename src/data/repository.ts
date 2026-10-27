@@ -11,6 +11,8 @@ export interface DocEdition {
   lang: string;
   link: string;
   head: string;
+  /** Optional public https audio briefing. Omitted editions stay text/PDF only. */
+  audioUrl?: string;
 }
 
 export interface PressMeet {

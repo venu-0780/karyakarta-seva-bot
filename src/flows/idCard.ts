@@ -1,4 +1,4 @@
-import { config } from "../config.js";
+import { config, thanksSticker } from "../config.js";
 import { PARTY_CONTACT } from "../data/sample.js";
 import { STAGES } from "../data/repository.js";
 import { backButton, L, LB, PH, readLangPref, t } from "../services/i18n.js";
@@ -108,7 +108,11 @@ export async function idCheck(ctx: FlowContext, raw: string): Promise<Reply> {
           `❌ No membership found for *${masked}*.\n` +
           "Check the number you used when you registered, or contact your mandal coordinator.",
       }),
-      buttons: [{ id: "id", label: LB(pref, PH.tryAnother) }, backButton(pref)],
+      buttons: [
+        { id: "id", label: LB(pref, PH.tryAnother) },
+        ...(config.flows.membership ? [{ id: "join", label: LB(pref, { te: "దరఖాస్తు", en: "Apply" }) }] : []),
+        backButton(pref),
+      ],
       contacts: [PARTY_CONTACT],
     };
   }
@@ -125,7 +129,10 @@ export async function idCheck(ctx: FlowContext, raw: string): Promise<Reply> {
   const collectLbl = LB(pref, { te: "📍 *తీసుకునే చోటు:* ", en: "📍 *Collect at:* " });
   const title = LB(pref, { te: "ఐడి కార్డు స్థితి", en: "ID card status" });
 
+  const sticker = thanksSticker();
   return {
+    reactionEmoji: "✅",
+    ...(sticker ? { sticker } : {}),
     text:
       `🪪 *${title}* · ${masked}\n\n` +
       `${nameLbl}: *${r.name}*\n${midLbl}: *${r.mid}*\n${acLbl}: *${r.ac}*\n\n` +

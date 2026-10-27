@@ -6,7 +6,9 @@ import { createMemoryState } from "@chat-adapter/state-memory";
 import { config } from "./config.js";
 import { readLangPref } from "./services/i18n.js";
 import { createSampleRepositories } from "./data/sample.js";
-import { render, type PostableThread } from "./render/whatsapp.js";
+import { completeForm } from "./flows/forms.js";
+import { nearestFromPin } from "./flows/nearest.js";
+import { markReadAndType, render, type PostableThread } from "./render/whatsapp.js";
 import { graphThread } from "./render/graphThread.js";
 import { notifyCoordinator } from "./render/coordinatorNotify.js";
 import { idCheck } from "./flows/idCard.js";
@@ -23,6 +25,7 @@ import {
 } from "./services/escalation.js";
 import { MemorySessionStore, RedisSessionStore, type SessionStore } from "./services/session.js";
 import { usableDisplayName } from "./services/displayName.js";
+import { submissionStore } from "./services/submissions.js";
 import { subscriberStore } from "./services/subscribers.js";
 import type { FlowContext, Reply, Services } from "./types.js";
 
@@ -50,6 +53,7 @@ const services: Services = {
   analytics: useRedis ? new RedisAnalytics() : new MemoryAnalytics(),
   prefs: useRedis ? new RedisLanguageStore() : new MemoryLanguageStore(),
   escalation,
+  submissions: submissionStore(),
 };
 const sessions: SessionStore = useRedis ? new RedisSessionStore() : new MemorySessionStore();
 
@@ -131,20 +135,33 @@ function rememberDisplayName(ctx: FlowContext, raw: unknown): void {
 
 // --- Handlers ----------------------------------------------------------------
 // Direct message (text). The prototype is a 1:1 DM bot.
+function inboundMessageId(source: any): string {
+  const id = source?.id ?? source?.messageId ?? source?.message?.id ?? source?.raw?.id;
+  return typeof id === "string" ? id : "";
+}
+
 bot.onDirectMessage(async (thread: any, message: any) => {
   const userId = String(thread.id ?? message.from);
   const text = String(message.text ?? "");
-  // Read receipts and typing are optional. A failure here (for example Meta's
-  // webhook "Test" sample) must not stop the actual reply.
-  await thread.markAsRead?.().catch(() => {});
-  await thread.startTyping?.().catch(() => {});
+  const messageId = inboundMessageId(message);
+  // One Graph call marks the message read and shows typing. Fall back to the
+  // adapter when the inbound id isn't on the Chat SDK event.
+  if (messageId) await markReadAndType(messageId);
+  else {
+    await thread.markAsRead?.().catch(() => {});
+    await thread.startTyping?.().catch(() => {});
+  }
   await services.analytics.track("in:text", userId);
   await subscriberStore().add(userId);
   const ctx = await makeContext(userId, { text });
   rememberDisplayName(ctx, message.author?.fullName ?? message.author?.userName);
-  const reply = await runText(ctx, text);
+  const loc = message.location ?? message.raw?.location;
+  const reply =
+    loc && typeof loc.latitude === "number" && typeof loc.longitude === "number"
+      ? await nearestFromPin(ctx, loc.latitude, loc.longitude)
+      : await runText(ctx, text);
   await rememberList(ctx, reply);
-  await render(thread as PostableThread, reply);
+  await render(thread as PostableThread, reply, { inboundMessageId: messageId || undefined });
 });
 
 // Button taps / list selections.
@@ -153,14 +170,16 @@ bot.onAction(async (event: any) => {
   const thread = event.thread;
   const userId = String(event.threadId ?? thread?.id ?? event.user?.id ?? "");
   const actionId = String(event.actionId ?? event.value ?? "");
-  await thread?.startTyping?.().catch(() => {});
+  const messageId = inboundMessageId(event);
+  if (messageId) await markReadAndType(messageId);
+  else await thread?.startTyping?.().catch(() => {});
   await services.analytics.track("in:action", userId);
   await subscriberStore().add(userId);
   const ctx = await makeContext(userId, { actionId });
   rememberDisplayName(ctx, event.user?.fullName ?? event.user?.userName);
   const reply = await runAction(ctx, actionId);
   await rememberList(ctx, reply);
-  await render(thread as PostableThread, reply);
+  await render(thread as PostableThread, reply, { inboundMessageId: messageId || undefined });
 });
 
 /**
@@ -196,6 +215,16 @@ export async function handleWhatApiWebhook(payload: unknown): Promise<void> {
         rememberDisplayName(ctx, (contact as any)?.profile?.name);
         await services.analytics.track(item.interactive ? "in:action" : "in:text", waId);
         await subscriberStore().add(waId);
+        const messageId = typeof item.id === "string" ? item.id : "";
+        if (messageId) await markReadAndType(messageId);
+
+        const loc = item.location;
+        if (item.type === "location" && loc && typeof loc.latitude === "number" && typeof loc.longitude === "number") {
+          const reply = await nearestFromPin(ctx, loc.latitude, loc.longitude);
+          await rememberList(ctx, reply);
+          await render(graphThread(waId), reply, { inboundMessageId: messageId || undefined });
+          continue;
+        }
 
         const actionId =
           item.interactive?.button_reply?.id ??
@@ -211,7 +240,7 @@ export async function handleWhatApiWebhook(payload: unknown): Promise<void> {
             ? await runAction(ctx, actionId)
             : await runText(ctx, typeof text === "string" ? text : "");
         await rememberList(ctx, reply);
-        await render(graphThread(waId), reply);
+        await render(graphThread(waId), reply, { inboundMessageId: messageId || undefined });
       }
     }
   }
@@ -230,7 +259,8 @@ export async function handleFlowCompletion(
   const ctx = await makeContext(waId, {});
   await services.analytics.track("in:flow", waId);
   await subscriberStore().add(waId);
-  let reply: Reply = [];
+  const formed = await completeForm(ctx, token, payload);
+  let reply: Reply = formed ?? [];
   if (token === "idstatus") {
     const mobile = String(payload.mobile ?? "");
     if (mobile) reply = await idCheck(ctx, mobile);
