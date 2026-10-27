@@ -3,7 +3,7 @@
 // -----------------------------------------------------------------------------
 import { config } from "../config.js";
 import { membershipFormData } from "./formText.js";
-import { backButton, L, LB, readLangPref } from "../services/i18n.js";
+import { backButton, L, LB, PH, readLangPref } from "../services/i18n.js";
 import type { FlowContext, Reply } from "../types.js";
 
 export async function membershipAsk(ctx: FlowContext): Promise<Reply> {
