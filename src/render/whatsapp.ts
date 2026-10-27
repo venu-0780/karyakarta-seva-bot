@@ -306,6 +306,20 @@ export async function markReadAndType(messageId: string): Promise<void> {
   }
 }
 
+/**
+ * HTTP 200 is not enough. The BSP queues some rejected payloads and puts the
+ * Graph error in the JSON body. Callers that skip a chat fallback must treat
+ * that as a failed send.
+ */
+export function graphBodyAccepted(status: number, body: unknown): boolean {
+  if (status < 200 || status >= 300) return false;
+  if (!body || typeof body !== "object") return true;
+  const parsed = body as { error?: unknown; message?: { message_status?: string } };
+  if (parsed.error) return false;
+  const messageStatus = parsed.message?.message_status;
+  return messageStatus !== "failed" && messageStatus !== "error";
+}
+
 async function graphSend(thread: PostableThread, message: Record<string, unknown>): Promise<boolean> {
   const token = config.whatsapp.accessToken;
   const phoneId = config.whatsapp.phoneNumberId;
@@ -338,8 +352,14 @@ async function graphSend(thread: PostableThread, message: Record<string, unknown
       },
       body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", ...address, ...message }),
     });
-    if (!res.ok) {
-      const errText = await res.text();
+    const errText = await res.text();
+    let body: unknown = null;
+    try {
+      body = errText ? JSON.parse(errText) : null;
+    } catch {
+      body = null;
+    }
+    if (!graphBodyAccepted(res.status, body)) {
       console.error("WhatsApp graph send failed", res.status, errText.slice(0, 400));
       return false;
     }
@@ -395,8 +415,35 @@ async function postContacts(thread: PostableThread, contacts: ContactCard[]): Pr
   await thread.post({ markdown: lines.join("\n\n") });
 }
 
+/**
+ * True only when this flow id exists and matches the send mode. A missing id
+ * still gets HTTP 200 from the BSP, and treating that as success skips the
+ * text fallback — the user sees typing and then nothing.
+ */
+async function flowCanBeSent(flowId: string): Promise<boolean> {
+  const token = config.whatsapp.accessToken;
+  if (!token || !flowId) return false;
+  try {
+    const res = await fetch(
+      `${config.whatsapp.apiUrl}/${config.whatsapp.graphVersion}/${flowId}?fields=id,status`,
+      { headers: { Authorization: `Bearer ${token}`, "User-Agent": "karyakarta-seva-bot/1.0" } },
+    );
+    const body = (await res.json().catch(() => null)) as { id?: string; status?: string; error?: unknown } | null;
+    if (!res.ok || !body || body.error || !body.id) return false;
+    const status = (body.status ?? "").toUpperCase();
+    if (config.whatsapp.flowMode === "draft") return status === "DRAFT" || status === "PUBLISHED";
+    return status === "PUBLISHED";
+  } catch {
+    return false;
+  }
+}
+
 /** Open a native WhatsApp Flow. Returns false when it can't be sent. */
 async function postFlow(thread: PostableThread, f: FlowMessage): Promise<boolean> {
+  if (!(await flowCanBeSent(f.flowId))) {
+    console.error("WhatsApp flow not sendable, using chat fallback", f.flowId);
+    return false;
+  }
   const parameters: Record<string, unknown> = {
     flow_message_version: "3",
     flow_token: f.token,

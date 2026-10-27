@@ -2,6 +2,7 @@ import assert from "node:assert/strict";
 import { test } from "node:test";
 
 import {
+  graphBodyAccepted,
   render,
   whatsAppButtonPayload,
   whatsAppListPayload,
@@ -98,6 +99,24 @@ test("render splits long text into <=4096-char posts", async () => {
     const md = typeof p === "string" ? p : p.markdown ?? "";
     assert.ok(md.length <= 4096);
   }
+});
+
+test("graphBodyAccepted rejects an error body even when HTTP is 200", () => {
+  assert.equal(graphBodyAccepted(200, { message: { queue_id: "q", message_status: "queued" } }), true);
+  assert.equal(graphBodyAccepted(200, { error: { message: "Unsupported" } }), false);
+  assert.equal(graphBodyAccepted(200, { message: { message_status: "failed" } }), false);
+  assert.equal(graphBodyAccepted(400, {}), false);
+});
+
+test("a flow that cannot be sent still delivers the chat fallback", async () => {
+  const { thread, posts } = fakeThread();
+  await render(thread, {
+    flow: { flowId: "missing-flow", token: "poll:p1", screen: "POLL", cta: "Vote", body: "Which issue?" },
+    text: "Tap one option. You can vote once.",
+    buttons: [{ id: "vote-p1-0", label: "Yes" }],
+  });
+  assert.ok(posts.length >= 1);
+  assert.match(JSON.stringify(posts), /Tap one option/);
 });
 
 test("render falls back to numbered text when a native list can't be sent", async () => {

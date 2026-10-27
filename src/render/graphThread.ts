@@ -5,14 +5,14 @@
 // renderer uses, so render()/renderOne() work unchanged against it.
 // -----------------------------------------------------------------------------
 import { config } from "../config.js";
-import type { PostPayload, PostableThread } from "./whatsapp.js";
+import { graphBodyAccepted, type PostPayload, type PostableThread } from "./whatsapp.js";
 
-async function graphPost(message: Record<string, unknown>): Promise<void> {
+async function graphPost(message: Record<string, unknown>): Promise<boolean> {
   const token = config.whatsapp.accessToken;
   const phoneId = config.whatsapp.phoneNumberId;
-  if (!token || !phoneId) return;
+  if (!token || !phoneId) return false;
   try {
-    await fetch(`${config.whatsapp.apiUrl}/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
+    const res = await fetch(`${config.whatsapp.apiUrl}/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -21,8 +21,21 @@ async function graphPost(message: Record<string, unknown>): Promise<void> {
       },
       body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", ...message }),
     });
-  } catch {
-    // best-effort proactive send
+    const text = await res.text();
+    let body: unknown = null;
+    try {
+      body = text ? JSON.parse(text) : null;
+    } catch {
+      body = null;
+    }
+    if (!graphBodyAccepted(res.status, body)) {
+      console.error("WhatsApp graph send failed", res.status, text.slice(0, 400));
+      return false;
+    }
+    return true;
+  } catch (err) {
+    console.error("WhatsApp graph send failed", err instanceof Error ? err.message : "network");
+    return false;
   }
 }
 
@@ -35,7 +48,8 @@ export function graphThread(toWaId: string): PostableThread {
     adapter: {
       // The renderer's interactive path calls this for reply buttons / lists.
       sendInteractiveMessage: async (_threadId, to, interactive) => {
-        await graphPost({ to, type: "interactive", interactive });
+        const ok = await graphPost({ to, type: "interactive", interactive });
+        if (!ok) throw new Error("interactive send failed");
       },
       decodeThreadId: () => ({ userWaId: toWaId }),
     },

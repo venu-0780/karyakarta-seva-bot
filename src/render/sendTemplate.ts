@@ -10,6 +10,7 @@
 // response so the caller can tally failures and keep going.
 // -----------------------------------------------------------------------------
 import { config } from "../config.js";
+import { graphBodyAccepted } from "./whatsapp.js";
 
 export interface TemplateMessage {
   /** Approved template name (must exist in WhatsApp Manager). */
@@ -47,16 +48,17 @@ async function graphMessage(toWaId: string, message: Record<string, unknown>): P
         ...message,
       }),
     });
-    if (!res.ok) {
-      const body = (await res.text()).slice(0, 500);
+    const raw = await res.text();
+    const body = raw.slice(0, 500);
+    let parsed: { error?: { message?: string } } | null = null;
+    try {
+      parsed = raw ? (JSON.parse(raw) as { error?: { message?: string } }) : null;
+    } catch {
+      parsed = null;
+    }
+    if (!graphBodyAccepted(res.status, parsed)) {
       console.error("WhatsApp send failed", res.status, body);
-      let error = body;
-      try {
-        const parsed = JSON.parse(body) as { error?: { message?: string } };
-        if (parsed.error?.message) error = parsed.error.message;
-      } catch {
-        // keep the raw body
-      }
+      const error = parsed?.error?.message || body || `HTTP ${res.status}`;
       return { ok: false, error };
     }
     return { ok: true };
