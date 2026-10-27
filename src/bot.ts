@@ -164,6 +164,60 @@ bot.onAction(async (event: any) => {
 });
 
 /**
+ * Handle a WhatAPI webhook without using the Chat SDK's sender. WhatAPI accepts
+ * Meta-shaped requests but returns a different success body, so the SDK treats
+ * a delivered message as failed and retries it. Direct sends avoid duplicate
+ * replies and keep media URLs out of the chat body.
+ */
+export async function handleWhatApiWebhook(payload: unknown): Promise<void> {
+  const entries = (payload as { entry?: unknown })?.entry;
+  if (!Array.isArray(entries)) return;
+
+  for (const entry of entries) {
+    const changes = (entry as { changes?: unknown })?.changes;
+    if (!Array.isArray(changes)) continue;
+    for (const change of changes) {
+      const value = (change as { value?: Record<string, unknown> })?.value;
+      const messages = value?.messages;
+      if (!Array.isArray(messages)) continue;
+      for (const message of messages) {
+        const item = message as Record<string, any>;
+        const waId = typeof item.from === "string" ? item.from : "";
+        if (!waId || item.type === "system") continue;
+        const ownNumber =
+          config.whatsapp.businessNumber ??
+          String((value?.metadata as Record<string, unknown> | undefined)?.display_phone_number ?? "").replace(/\D/g, "");
+        if (item.from_me === true || item.direction === "outbound" || (ownNumber && waId === ownNumber)) {
+          continue;
+        }
+
+        const ctx = await makeContext(waId, {});
+        const contact = Array.isArray(value?.contacts) ? value.contacts[0] : undefined;
+        rememberDisplayName(ctx, (contact as any)?.profile?.name);
+        await services.analytics.track(item.interactive ? "in:action" : "in:text", waId);
+        await subscriberStore().add(waId);
+
+        const actionId =
+          item.interactive?.button_reply?.id ??
+          item.interactive?.list_reply?.id ??
+          item.button?.payload;
+        const text =
+          item.text?.body ??
+          item.button?.text ??
+          item.interactive?.button_reply?.title ??
+          item.interactive?.list_reply?.title;
+        const reply =
+          typeof actionId === "string" && actionId
+            ? await runAction(ctx, actionId)
+            : await runText(ctx, typeof text === "string" ? text : "");
+        await rememberList(ctx, reply);
+        await render(graphThread(waId), reply);
+      }
+    }
+  }
+}
+
+/**
  * Handle a WhatsApp Flow completion (see services/flowWebhook.ts). The webhook
  * route calls this for an `nfm_reply`. We rebuild the user's context, dispatch
  * by the correlation token, and reply over a direct-Graph-API thread.

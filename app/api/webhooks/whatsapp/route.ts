@@ -1,11 +1,9 @@
-import crypto from "node:crypto";
 import { after } from "next/server";
-import { bot, handleFlowCompletion } from "../../../../src/bot.js";
+import { handleFlowCompletion, handleWhatApiWebhook } from "../../../../src/bot.js";
 import { markProcessed } from "../../../../src/services/dedup.js";
 import {
   extractInboundMessageIds,
   parseFlowCompletion,
-  verifySignature,
 } from "../../../../src/services/flowWebhook.js";
 
 const CHALLENGE_KEYS = ["challange", "challenge", "hub.challenge"] as const;
@@ -42,7 +40,10 @@ export const dynamic = "force-dynamic";
 export const maxDuration = 30;
 
 // WhatAPI: GET /webhook?echo=true&challange=<code> and the body must be that code.
+// Verify-token check is off for now, matching the manager's sample (VERIFY_TOKEN is empty).
 export async function GET(request: Request) {
+  // const rejected = rejectVerifyToken(request);
+  // if (rejected) return rejected;
   return plain(challengeFrom(request) ?? "OK");
 }
 
@@ -51,47 +52,50 @@ export async function GET(request: Request) {
 // the webhook.
 export async function POST(request: Request) {
   const raw = await request.text();
+  // const rejected = rejectVerifyToken(request, raw);
+  // if (rejected) return rejected;
   const challenge = challengeFrom(request, raw);
   if (challenge != null) return plain(challenge);
 
-  const headers = new Headers(request.headers);
-  const signature = headers.get("x-hub-signature-256");
-  if (!verifySignature(raw, signature)) {
-    const secret = process.env.WHATSAPP_APP_SECRET;
-    if (secret) {
-      headers.set(
-        "x-hub-signature-256",
-        "sha256=" + crypto.createHmac("sha256", secret).update(raw).digest("hex"),
-      );
-    }
+  let payload: unknown;
+  try {
+    payload = JSON.parse(raw);
+  } catch {
+    return plain("OK");
   }
 
-  if (secretPresent(raw, headers)) {
-    // Idempotency: Meta re-delivers the same message id until it gets a 200.
-    // Mark each inbound id once; if every message here is a repeat, ack and stop
-    // so we never reply twice or call the LLM twice for one user message.
-    const ids = extractInboundMessageIds(raw);
-    if (ids.length > 0) {
-      const fresh = await Promise.all(ids.map(markProcessed));
-      if (fresh.every((isNew) => !isNew)) {
-        return plain("OK");
-      }
-    }
-
-    const flow = parseFlowCompletion(raw);
-    if (flow?.from && flow.token) {
-      after(() => handleFlowCompletion(flow.from, flow.token, flow.payload));
+  // Idempotency: WhatAPI can deliver retries in quick succession.
+  const ids = extractInboundMessageIds(raw);
+  if (ids.length > 0) {
+    const fresh = await Promise.all(ids.map(markProcessed));
+    if (fresh.every((isNew) => !isNew)) {
       return plain("OK");
     }
   }
 
-  const rebuilt = new Request(request.url, { method: "POST", headers, body: raw });
-  await bot.webhooks.whatsapp(rebuilt, {
-    waitUntil: (task) => after(() => task),
-  });
+  const flow = parseFlowCompletion(raw);
+  if (flow?.from && flow.token) {
+    after(() => handleFlowCompletion(flow.from, flow.token, flow.payload));
+    return plain("OK");
+  }
+
+  after(() => handleWhatApiWebhook(payload));
   return plain("OK");
 }
 
-function secretPresent(raw: string, headers: Headers): boolean {
-  return verifySignature(raw, headers.get("x-hub-signature-256"));
-}
+// Restore this when the CRM starts sending hub.verify_token.
+// function rejectVerifyToken(request: Request, raw?: string): Response | null {
+//   const expected = process.env.WHATSAPP_VERIFY_TOKEN;
+//   if (!expected) return null;
+//   let token = new URL(request.url).searchParams.get("hub.verify_token");
+//   if (token == null && raw) {
+//     try {
+//       const body = JSON.parse(raw) as Record<string, unknown>;
+//       if (typeof body["hub.verify_token"] === "string") token = body["hub.verify_token"];
+//     } catch {
+//       // Not a JSON challenge.
+//     }
+//   }
+//   if (token != null && token !== expected) return plain("Forbidden", 403);
+//   return null;
+// }

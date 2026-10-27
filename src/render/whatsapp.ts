@@ -558,7 +558,10 @@ const sleep = (ms: number): Promise<void> => new Promise((r) => setTimeout(r, ms
 // WhatsApp delivers link-based media only after it has fetched the file, so a
 // following text/interactive message can overtake it. A short pause after a
 // media message keeps a hero image above the content that belongs under it.
-const MEDIA_ORDER_DELAY_MS = 1200;
+// WhatAPI first accepts a link-based image, then fetches and forwards it to
+// WhatsApp. Give that extra time before sending the menu, otherwise the menu
+// can visibly arrive above the welcome banner.
+const MEDIA_ORDER_DELAY_MS = 2500;
 
 /** Send a Reply (one response or an ordered sequence). */
 export async function render(thread: PostableThread, reply: Reply): Promise<void> {

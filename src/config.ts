@@ -16,6 +16,9 @@ export const config = {
     accessToken: process.env.WHATSAPP_ACCESS_TOKEN,
     appSecret: process.env.WHATSAPP_APP_SECRET,
     phoneNumberId: process.env.WHATSAPP_PHONE_NUMBER_ID,
+    // Dialable business number (digits only) used to ignore echoed outbound
+    // events from BSPs that deliver them to the inbound webhook.
+    businessNumber: process.env.WHATSAPP_BUSINESS_NUMBER?.replace(/\D/g, ""),
     verifyToken: process.env.WHATSAPP_VERIFY_TOKEN,
     botUsername: opt("WHATSAPP_BOT_USERNAME", "praja-seva-helpdesk"),
     // Meta-compatible API origin. Some BSP/CRM providers proxy the Graph API.

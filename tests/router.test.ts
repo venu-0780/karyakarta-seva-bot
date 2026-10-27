@@ -23,7 +23,7 @@ test("greeting uses the WhatsApp profile name when one was saved", async () => {
   const ctx = makeContext({ data: { displayName: "Ravi Kumar" } });
   const reply = arr(await runText(ctx, "hi"));
   const caption = reply.find((r) => r.media?.length)?.media?.[0]?.caption ?? "";
-  assert.match(caption, /Welcome, \*\*Ravi Kumar\*\*/);
+  assert.match(caption, /Welcome, \*Ravi Kumar\*, to the \*Praja Seva Helpdesk\*/);
 });
 
 test("numeric shortcut 3 opens the press-meet day picker", async () => {
