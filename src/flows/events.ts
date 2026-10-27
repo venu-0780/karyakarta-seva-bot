@@ -4,7 +4,7 @@
 // -----------------------------------------------------------------------------
 import { config } from "../config.js";
 import { eventFormData } from "./formText.js";
-import { backButton, L, LB, readLangPref } from "../services/i18n.js";
+import { L, LB, readLangPref } from "../services/i18n.js";
 import type { BotResponse, FlowContext } from "../types.js";
 
 export function eventInvite(ctx: FlowContext): BotResponse | undefined {
@@ -22,8 +22,8 @@ export function eventInvite(ctx: FlowContext): BotResponse | undefined {
         en: "🎟️ Want to attend? Register with the button below.",
       }),
       data: eventFormData(pref),
+      footer: LB(pref, PH.formBack),
     },
-    menuButton: backButton(pref),
     text: L(pref, {
       te: "నమోదు ఫారమ్ ఇప్పుడు అందుబాటులో లేదు. కోఆర్డినేటర్‌కు మెసేజ్ పంపండి.",
       en: "The registration form isn't available right now. Message your coordinator to sign up.",

@@ -29,7 +29,7 @@ export async function surveyAsk(ctx: FlowContext): Promise<Reply> {
         en: "⭐ Take a moment to rate this helpdesk.",
       }),
       data: surveyFormData(pref),
+      footer: LB(pref, PH.formBack),
     },
-    menuButton: backButton(pref),
   };
 }

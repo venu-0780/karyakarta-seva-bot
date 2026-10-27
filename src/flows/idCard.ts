@@ -66,8 +66,8 @@ export async function idAsk(ctx: FlowContext): Promise<Reply> {
           en: "🪪 *ID card status*\n\nTap the button below to open the form.",
         }),
         data: idFormData(pref),
+        footer: LB(pref, PH.formBack),
       },
-      menuButton: backButton(pref),
     };
   }
   return chatPrompt;

@@ -29,7 +29,7 @@ export async function membershipAsk(ctx: FlowContext): Promise<Reply> {
         en: "🪪 *ID card application*\n\nTap below and fill in the form.",
       }),
       data: membershipFormData(pref),
+      footer: LB(pref, PH.formBack),
     },
-    menuButton: backButton(pref),
   };
 }

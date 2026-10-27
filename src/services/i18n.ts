@@ -50,6 +50,8 @@ export const PH = {
   mainMenu: { te: "మెనూకు వెళ్లు", en: "Back to menu" },
   help: { te: "సహాయం", en: "Help" },
   menuFooter: { te: "ఎప్పుడైనా 'మెనూ' అని టైప్ చేయండి", en: "Type menu anytime" },
+  // A form bubble can only have the Open button, so the way back sits under it.
+  formBack: { te: "మెనూకు వెళ్లాలంటే మెనూ అని టైప్ చేయండి", en: "Back to menu: type menu" },
   choose: { te: "ఎంచుకోండి", en: "Choose" },
 
   // Shown by the LLM router when a message could mean one of a few flows.

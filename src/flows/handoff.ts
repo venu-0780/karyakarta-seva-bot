@@ -65,8 +65,8 @@ export async function escalationStart(ctx: FlowContext): Promise<Reply> {
         en: "🧑‍💼 *Coordinator help*\n\nSend a complaint, suggestion, or note with the form below.",
       }),
       data: feedbackFormData(pref),
+      footer: LB(pref, PH.formBack),
     },
-    menuButton: backButton(pref),
   };
 }
 
