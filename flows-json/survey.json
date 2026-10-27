@@ -3,15 +3,28 @@
   "screens": [
     {
       "id": "RATE",
-      "title": "Rate / రేటింగ్",
-      "data": {},
+      "title": "${data.title}",
+      "data": {
+        "title": { "type": "string", "__example__": "Rating" },
+        "intro": { "type": "string", "__example__": "How useful is this helpdesk?" },
+        "rating_label": { "type": "string", "__example__": "Rating" },
+        "ratings": {
+          "type": "array",
+          "items": { "type": "object", "properties": { "id": { "type": "string" }, "title": { "type": "string" } } },
+          "__example__": [
+            { "id": "5", "title": "5 — Excellent" },
+            { "id": "1", "title": "1 — Not useful" }
+          ]
+        },
+        "next_label": { "type": "string", "__example__": "Next" },
+        "note_title": { "type": "string", "__example__": "Comment" },
+        "comment_label": { "type": "string", "__example__": "Anything else?" },
+        "send_label": { "type": "string", "__example__": "Send" }
+      },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
-          {
-            "type": "TextBody",
-            "text": "ఈ హెల్ప్‌డెస్క్ ఎంత ఉపయోగంగా ఉంది?\nHow useful is this helpdesk?"
-          },
+          { "type": "TextBody", "text": "${data.intro}" },
           {
             "type": "Form",
             "name": "form",
@@ -19,19 +32,13 @@
               {
                 "type": "RadioButtonsGroup",
                 "name": "rating",
-                "label": "రేటింగ్ / Rating",
+                "label": "${data.rating_label}",
                 "required": true,
-                "data-source": [
-                  { "id": "5", "title": "5 — చాలా బాగుంది / Excellent" },
-                  { "id": "4", "title": "4 — బాగుంది / Good" },
-                  { "id": "3", "title": "3 — సరే / Okay" },
-                  { "id": "2", "title": "2 — మెరుగు కావాలి / Needs work" },
-                  { "id": "1", "title": "1 — ఉపయోగం లేదు / Not useful" }
-                ]
+                "data-source": "${data.ratings}"
               },
               {
                 "type": "Footer",
-                "label": "తర్వాత / Next",
+                "label": "${data.next_label}",
                 "on-click-action": {
                   "name": "navigate",
                   "next": { "type": "screen", "name": "NOTE" },
@@ -45,7 +52,7 @@
     },
     {
       "id": "NOTE",
-      "title": "Comment / వ్యాఖ్య",
+      "title": "${screen.RATE.data.note_title}",
       "terminal": true,
       "success": true,
       "data": {
@@ -61,12 +68,12 @@
               {
                 "type": "TextArea",
                 "name": "comment",
-                "label": "మరింత చెప్పండి (ఐచ్చికం) / Anything else? (optional)",
+                "label": "${screen.RATE.data.comment_label}",
                 "required": false
               },
               {
                 "type": "Footer",
-                "label": "పంపండి / Send",
+                "label": "${screen.RATE.data.send_label}",
                 "on-click-action": {
                   "name": "complete",
                   "payload": {

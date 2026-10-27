@@ -3,14 +3,17 @@
   "screens": [
     {
       "id": "POLL",
-      "title": "Opinion Poll / పోల్",
+      "title": "${data.title}",
       "terminal": true,
       "success": true,
       "data": {
+        "title": { "type": "string", "__example__": "Poll" },
         "question": {
           "type": "string",
           "__example__": "Which issue matters most in your village?"
         },
+        "choose_label": { "type": "string", "__example__": "Choose one" },
+        "vote_label": { "type": "string", "__example__": "Vote" },
         "options": {
           "type": "array",
           "items": {
@@ -37,13 +40,13 @@
               {
                 "type": "RadioButtonsGroup",
                 "name": "choice",
-                "label": "ఒకటి ఎంచుకోండి / Choose one",
+                "label": "${data.choose_label}",
                 "required": true,
                 "data-source": "${data.options}"
               },
               {
                 "type": "Footer",
-                "label": "ఓటు / Vote",
+                "label": "${data.vote_label}",
                 "on-click-action": {
                   "name": "complete",
                   "payload": { "choice": "${form.choice}" }

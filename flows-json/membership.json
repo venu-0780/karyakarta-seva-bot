@@ -3,42 +3,36 @@
   "screens": [
     {
       "id": "WHO",
-      "title": "Membership / సభ్యత్వం",
-      "data": {},
+      "title": "${data.title}",
+      "data": {
+        "title": { "type": "string", "__example__": "Membership" },
+        "intro": { "type": "string", "__example__": "Apply for a membership ID card." },
+        "name_label": { "type": "string", "__example__": "Full name" },
+        "phone_label": { "type": "string", "__example__": "Mobile" },
+        "next_label": { "type": "string", "__example__": "Next" },
+        "place_title": { "type": "string", "__example__": "Address" },
+        "constituency_label": { "type": "string", "__example__": "Constituency" },
+        "address_label": { "type": "string", "__example__": "Address" },
+        "consent_label": { "type": "string", "__example__": "I agree to be contacted" },
+        "apply_label": { "type": "string", "__example__": "Apply" }
+      },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
-          {
-            "type": "TextBody",
-            "text": "ఐడి కార్డు దరఖాస్తు.\nApply for a membership ID card."
-          },
+          { "type": "TextBody", "text": "${data.intro}" },
           {
             "type": "Form",
             "name": "form",
             "children": [
-              {
-                "type": "TextInput",
-                "name": "name",
-                "label": "పూర్తి పేరు / Full name",
-                "required": true
-              },
-              {
-                "type": "TextInput",
-                "name": "phone",
-                "label": "మొబైల్ / Mobile",
-                "input-type": "phone",
-                "required": true
-              },
+              { "type": "TextInput", "name": "name", "label": "${data.name_label}", "required": true },
+              { "type": "TextInput", "name": "phone", "label": "${data.phone_label}", "input-type": "phone", "required": true },
               {
                 "type": "Footer",
-                "label": "తర్వాత / Next",
+                "label": "${data.next_label}",
                 "on-click-action": {
                   "name": "navigate",
                   "next": { "type": "screen", "name": "PLACE" },
-                  "payload": {
-                    "name": "${form.name}",
-                    "phone": "${form.phone}"
-                  }
+                  "payload": { "name": "${form.name}", "phone": "${form.phone}" }
                 }
               }
             ]
@@ -48,7 +42,7 @@
     },
     {
       "id": "PLACE",
-      "title": "Address / చిరునామా",
+      "title": "${screen.WHO.data.place_title}",
       "terminal": true,
       "success": true,
       "data": {
@@ -62,27 +56,12 @@
             "type": "Form",
             "name": "form",
             "children": [
-              {
-                "type": "TextInput",
-                "name": "constituency",
-                "label": "నియోజకవర్గం / Constituency",
-                "required": true
-              },
-              {
-                "type": "TextArea",
-                "name": "address",
-                "label": "చిరునామా / Address",
-                "required": true
-              },
-              {
-                "type": "OptIn",
-                "name": "consent",
-                "label": "సంప్రదించడానికి అంగీకరిస్తున్నాను / I agree to be contacted",
-                "required": true
-              },
+              { "type": "TextInput", "name": "constituency", "label": "${screen.WHO.data.constituency_label}", "required": true },
+              { "type": "TextArea", "name": "address", "label": "${screen.WHO.data.address_label}", "required": true },
+              { "type": "OptIn", "name": "consent", "label": "${screen.WHO.data.consent_label}", "required": true },
               {
                 "type": "Footer",
-                "label": "దరఖాస్తు / Apply",
+                "label": "${screen.WHO.data.apply_label}",
                 "on-click-action": {
                   "name": "complete",
                   "payload": {

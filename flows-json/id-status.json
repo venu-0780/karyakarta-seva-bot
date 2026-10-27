@@ -3,17 +3,20 @@
   "screens": [
     {
       "id": "ID_STATUS",
-      "title": "ID Card Status / ఐడి స్థితి",
+      "title": "${data.title}",
       "terminal": true,
       "success": true,
-      "data": {},
+      "data": {
+        "title": { "type": "string", "__example__": "ID status" },
+        "intro": { "type": "string", "__example__": "Check your ID card status with your registered mobile number." },
+        "mobile_label": { "type": "string", "__example__": "Mobile number" },
+        "mobile_help": { "type": "string", "__example__": "10 digits, e.g. 9876543210" },
+        "submit_label": { "type": "string", "__example__": "Check status" }
+      },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
-          {
-            "type": "TextBody",
-            "text": "మీ నమోదిత మొబైల్ నంబర్‌తో ఐడి కార్డు స్థితి చూడండి.\nCheck your membership ID card status with your registered mobile number."
-          },
+          { "type": "TextBody", "text": "${data.intro}" },
           {
             "type": "Form",
             "name": "form",
@@ -21,14 +24,14 @@
               {
                 "type": "TextInput",
                 "name": "mobile",
-                "label": "మొబైల్ నంబర్ / Mobile number",
+                "label": "${data.mobile_label}",
                 "input-type": "phone",
                 "required": true,
-                "helper-text": "10 అంకెలు / 10 digits, e.g. 9876543210"
+                "helper-text": "${data.mobile_help}"
               },
               {
                 "type": "Footer",
-                "label": "చూడండి / Check status",
+                "label": "${data.submit_label}",
                 "on-click-action": {
                   "name": "complete",
                   "payload": { "mobile": "${form.mobile}" }

@@ -3,15 +3,41 @@
   "screens": [
     {
       "id": "TYPE",
-      "title": "Feedback / అభిప్రాయం",
-      "data": {},
+      "title": "${data.title}",
+      "data": {
+        "title": { "type": "string", "__example__": "Feedback" },
+        "intro": { "type": "string", "__example__": "Choose what this message is about." },
+        "type_label": { "type": "string", "__example__": "Type" },
+        "categories": {
+          "type": "array",
+          "items": { "type": "object", "properties": { "id": { "type": "string" }, "title": { "type": "string" } } },
+          "__example__": [
+            { "id": "complaint", "title": "Complaint" },
+            { "id": "suggestion", "title": "Suggestion" },
+            { "id": "feedback", "title": "Feedback" }
+          ]
+        },
+        "next_label": { "type": "string", "__example__": "Next" },
+        "details_title": { "type": "string", "__example__": "Details" },
+        "details_label": { "type": "string", "__example__": "What happened?" },
+        "details_help": { "type": "string", "__example__": "A sentence or two" },
+        "contact_title": { "type": "string", "__example__": "Contact" },
+        "reply_label": { "type": "string", "__example__": "How should we reply?" },
+        "replies": {
+          "type": "array",
+          "items": { "type": "object", "properties": { "id": { "type": "string" }, "title": { "type": "string" } } },
+          "__example__": [
+            { "id": "whatsapp", "title": "WhatsApp" },
+            { "id": "call", "title": "Phone call" }
+          ]
+        },
+        "phone_label": { "type": "string", "__example__": "Phone (optional)" },
+        "submit_label": { "type": "string", "__example__": "Submit" }
+      },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
-          {
-            "type": "TextBody",
-            "text": "మీ సందేశం రకాన్ని ఎంచుకోండి.\nChoose what this message is about."
-          },
+          { "type": "TextBody", "text": "${data.intro}" },
           {
             "type": "Form",
             "name": "form",
@@ -19,17 +45,13 @@
               {
                 "type": "RadioButtonsGroup",
                 "name": "category",
-                "label": "రకం / Type",
+                "label": "${data.type_label}",
                 "required": true,
-                "data-source": [
-                  { "id": "complaint", "title": "ఫిర్యాదు / Complaint" },
-                  { "id": "suggestion", "title": "సూచన / Suggestion" },
-                  { "id": "feedback", "title": "అభిప్రాయం / Feedback" }
-                ]
+                "data-source": "${data.categories}"
               },
               {
                 "type": "Footer",
-                "label": "తర్వాత / Next",
+                "label": "${data.next_label}",
                 "on-click-action": {
                   "name": "navigate",
                   "next": { "type": "screen", "name": "DETAILS" },
@@ -43,7 +65,7 @@
     },
     {
       "id": "DETAILS",
-      "title": "Details / వివరాలు",
+      "title": "${screen.TYPE.data.details_title}",
       "data": {
         "category": { "type": "string", "__example__": "complaint" }
       },
@@ -57,13 +79,13 @@
               {
                 "type": "TextArea",
                 "name": "details",
-                "label": "వివరాలు / What happened?",
+                "label": "${screen.TYPE.data.details_label}",
                 "required": true,
-                "helper-text": "ఒకటి లేదా రెండు వాక్యాలు / A sentence or two"
+                "helper-text": "${screen.TYPE.data.details_help}"
               },
               {
                 "type": "Footer",
-                "label": "తర్వాత / Next",
+                "label": "${screen.TYPE.data.next_label}",
                 "on-click-action": {
                   "name": "navigate",
                   "next": { "type": "screen", "name": "CONTACT" },
@@ -80,7 +102,7 @@
     },
     {
       "id": "CONTACT",
-      "title": "Contact / సంప్రదింపు",
+      "title": "${screen.TYPE.data.contact_title}",
       "terminal": true,
       "success": true,
       "data": {
@@ -97,23 +119,20 @@
               {
                 "type": "RadioButtonsGroup",
                 "name": "callback",
-                "label": "మిమ్మల్ని ఎలా సంప్రదించాలి? / How should we reply?",
+                "label": "${screen.TYPE.data.reply_label}",
                 "required": true,
-                "data-source": [
-                  { "id": "whatsapp", "title": "WhatsApp" },
-                  { "id": "call", "title": "ఫోన్ కాల్ / Phone call" }
-                ]
+                "data-source": "${screen.TYPE.data.replies}"
               },
               {
                 "type": "TextInput",
                 "name": "phone",
-                "label": "ఫోన్ (ఐచ్చికం) / Phone (optional)",
+                "label": "${screen.TYPE.data.phone_label}",
                 "input-type": "phone",
                 "required": false
               },
               {
                 "type": "Footer",
-                "label": "పంపండి / Submit",
+                "label": "${screen.TYPE.data.submit_label}",
                 "on-click-action": {
                   "name": "complete",
                   "payload": {

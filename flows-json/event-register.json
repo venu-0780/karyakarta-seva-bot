@@ -3,42 +3,45 @@
   "screens": [
     {
       "id": "WHO",
-      "title": "Register / నమోదు",
-      "data": {},
+      "title": "${data.title}",
+      "data": {
+        "title": { "type": "string", "__example__": "Register" },
+        "intro": { "type": "string", "__example__": "Register to attend a press meet." },
+        "name_label": { "type": "string", "__example__": "Your name" },
+        "phone_label": { "type": "string", "__example__": "Mobile" },
+        "next_label": { "type": "string", "__example__": "Next" },
+        "event_title": { "type": "string", "__example__": "Event" },
+        "constituency_label": { "type": "string", "__example__": "Constituency" },
+        "attendees_label": { "type": "string", "__example__": "How many?" },
+        "day_label": { "type": "string", "__example__": "Which day?" },
+        "slots": {
+          "type": "array",
+          "items": { "type": "object", "properties": { "id": { "type": "string" }, "title": { "type": "string" } } },
+          "__example__": [
+            { "id": "today", "title": "Today" },
+            { "id": "tomorrow", "title": "Tomorrow" },
+            { "id": "either", "title": "Either" }
+          ]
+        },
+        "register_label": { "type": "string", "__example__": "Register" }
+      },
       "layout": {
         "type": "SingleColumnLayout",
         "children": [
-          {
-            "type": "TextBody",
-            "text": "ప్రెస్ మీట్‌కు హాజరు నమోదు చేయండి.\nRegister to attend a press meet."
-          },
+          { "type": "TextBody", "text": "${data.intro}" },
           {
             "type": "Form",
             "name": "form",
             "children": [
-              {
-                "type": "TextInput",
-                "name": "name",
-                "label": "పేరు / Your name",
-                "required": true
-              },
-              {
-                "type": "TextInput",
-                "name": "phone",
-                "label": "మొబైల్ / Mobile",
-                "input-type": "phone",
-                "required": true
-              },
+              { "type": "TextInput", "name": "name", "label": "${data.name_label}", "required": true },
+              { "type": "TextInput", "name": "phone", "label": "${data.phone_label}", "input-type": "phone", "required": true },
               {
                 "type": "Footer",
-                "label": "తర్వాత / Next",
+                "label": "${data.next_label}",
                 "on-click-action": {
                   "name": "navigate",
                   "next": { "type": "screen", "name": "EVENT" },
-                  "payload": {
-                    "name": "${form.name}",
-                    "phone": "${form.phone}"
-                  }
+                  "payload": { "name": "${form.name}", "phone": "${form.phone}" }
                 }
               }
             ]
@@ -48,7 +51,7 @@
     },
     {
       "id": "EVENT",
-      "title": "Event / కార్యక్రమం",
+      "title": "${screen.WHO.data.event_title}",
       "terminal": true,
       "success": true,
       "data": {
@@ -62,33 +65,18 @@
             "type": "Form",
             "name": "form",
             "children": [
-              {
-                "type": "TextInput",
-                "name": "constituency",
-                "label": "నియోజకవర్గం / Constituency",
-                "required": true
-              },
-              {
-                "type": "TextInput",
-                "name": "attendees",
-                "label": "ఎంత మంది వస్తారు? / How many people?",
-                "input-type": "number",
-                "required": true
-              },
+              { "type": "TextInput", "name": "constituency", "label": "${screen.WHO.data.constituency_label}", "required": true },
+              { "type": "TextInput", "name": "attendees", "label": "${screen.WHO.data.attendees_label}", "input-type": "number", "required": true },
               {
                 "type": "RadioButtonsGroup",
                 "name": "slot",
-                "label": "ఏ రోజు? / Which day?",
+                "label": "${screen.WHO.data.day_label}",
                 "required": true,
-                "data-source": [
-                  { "id": "today", "title": "ఈ రోజు / Today" },
-                  { "id": "tomorrow", "title": "రేపు / Tomorrow" },
-                  { "id": "either", "title": "ఏదైనా / Either" }
-                ]
+                "data-source": "${screen.WHO.data.slots}"
               },
               {
                 "type": "Footer",
-                "label": "నమోదు / Register",
+                "label": "${screen.WHO.data.register_label}",
                 "on-click-action": {
                   "name": "complete",
                   "payload": {

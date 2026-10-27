@@ -1,4 +1,5 @@
 import { BRAND_IMAGES, PARTY_CONTACT, PARTY_OFFICE } from "../data/sample.js";
+import { handoffButton } from "./handoff.js";
 import { backButton, L, LB, PH, readLangPref, type LangPref, type Phrase } from "../services/i18n.js";
 import type { FlowContext, ListRow, Reply } from "../types.js";
 
@@ -62,7 +63,7 @@ const HELP_ROWS: MenuRow[] = [
   { id: "media", title: { te: "పోస్టర్లు & రీల్స్", en: "Posters and reels" }, desc: { te: "ఫోటోలు, చిన్న వీడియోలు", en: "Images and short videos" } },
   { id: "near", title: { te: "దగ్గరి కార్యాలయం", en: "Nearest office" }, desc: { te: "మీ లొకేషన్ పంపండి", en: "Share your location" } },
   { id: "lang", title: { te: "భాష మార్చు", en: "Change language" }, desc: { te: "తెలుగు / English / రెండూ", en: "Telugu / English / Both" } },
-  { id: "help", title: { te: "సహాయం", en: "Help" }, desc: { te: "ఏం టైప్ చేయవచ్చో ఉదాహరణలు", en: "Examples of what you can type" } },
+  { id: "handoff", title: { te: "కోఆర్డినేటర్ సహాయం", en: "Coordinator help" }, desc: { te: "ఫిర్యాదు, సూచన లేదా సందేశం", en: "Complaint, feedback, or a note" } },
 ];
 
 function toRows(pref: LangPref, rows: MenuRow[]): ListRow[] {
@@ -107,7 +108,8 @@ const HELP_COPY: Phrase = {
     "• _రేపటి ప్రెస్ మీట్_\n" +
     "• _నా ఐడి స్థితి_\n" +
     "• _పోస్టర్లు చూపించు_\n" +
-    "• _దగ్గరి కార్యాలయం_\n\n" +
+    "• _దగ్గరి కార్యాలయం_\n" +
+    "• _కోఆర్డినేటర్ సహాయం_ — ఫిర్యాదు లేదా సందేశం\n\n" +
     "భాష మార్చాలంటే *English* లేదా *రెండూ* అని పంపండి.",
   en:
     "*Help*\n\n" +
@@ -116,7 +118,8 @@ const HELP_COPY: Phrase = {
     "• _tomorrow's press meet_\n" +
     "• _my ID status_\n" +
     "• _show posters_\n" +
-    "• _nearest office_\n\n" +
+    "• _nearest office_\n" +
+    "• _coordinator help_ — a complaint or a note to a person\n\n" +
     "Change language by typing *Telugu* or *both*.",
 };
 
@@ -130,7 +133,7 @@ export async function help(ctx: FlowContext): Promise<Reply> {
   return [
     {
       text: L(pref, HELP_COPY),
-      buttons: [{ id: "lang", label: "🌐 భాష / Language" }, { id: "id", label: LB(pref, PH.checkId) }, backButton(pref)],
+      buttons: [handoffButton(pref), { id: "lang", label: "🌐 భాష / Language" }, backButton(pref)],
     },
     { text: saveHint, contacts: [PARTY_CONTACT], location: PARTY_OFFICE },
   ];

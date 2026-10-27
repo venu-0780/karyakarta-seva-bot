@@ -47,7 +47,7 @@ export function LB(pref: LangPref, p: Phrase): string {
 // --- Shared, reusable copy --------------------------------------------------
 // Kept in one place so wording and tone stay consistent across all 7 flows.
 export const PH = {
-  mainMenu: { te: "మెనూ", en: "Main menu" },
+  mainMenu: { te: "మెనూకు వెళ్లు", en: "Back to menu" },
   help: { te: "సహాయం", en: "Help" },
   menuFooter: { te: "ఎప్పుడైనా 'మెనూ' అని టైప్ చేయండి", en: "Type menu anytime" },
   choose: { te: "ఎంచుకోండి", en: "Choose" },
@@ -109,7 +109,7 @@ export const PH = {
   chooseReel: { te: "రీల్ ఎంచుకోండి", en: "Choose reel" },
 } as const;
 
-/** Shared "Main menu" button, localized. Replaces the old fixed BACK constant. */
+/** Shared "Back to menu" button. Replaces the old fixed BACK constant. */
 export function backButton(pref: LangPref): Button {
   return { id: "menu", label: LB(pref, PH.mainMenu) };
 }

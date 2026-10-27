@@ -1,4 +1,5 @@
 import { config, thanksSticker } from "../config.js";
+import { idFormData } from "./formText.js";
 import { PARTY_CONTACT } from "../data/sample.js";
 import { STAGES } from "../data/repository.js";
 import { backButton, L, LB, PH, readLangPref, t } from "../services/i18n.js";
@@ -64,7 +65,9 @@ export async function idAsk(ctx: FlowContext): Promise<Reply> {
           te: "🪪 *ఐడి కార్డు స్థితి*\n\nకింద ఉన్న బటన్ నొక్కి ఫారమ్ తెరవండి.",
           en: "🪪 *ID card status*\n\nTap the button below to open the form.",
         }),
+        data: idFormData(pref),
       },
+      menuButton: backButton(pref),
     };
   }
   return chatPrompt;

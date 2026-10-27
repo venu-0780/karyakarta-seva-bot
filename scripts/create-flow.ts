@@ -57,14 +57,32 @@ async function main() {
   const flowJson = await readFile(jsonPath, "utf8");
   JSON.parse(flowJson); // fail fast on malformed JSON
 
-  console.log(`Creating flow "${name}" (${category}) on WABA ${WABA}...`);
-  const created = await post(
-    `${API}/${WABA}/flows`,
-    JSON.stringify({ name, categories: [category] }),
-    { "Content-Type": "application/json" },
-  );
-  const flowId = String(created.id);
-  console.log(`  flow id: ${flowId}`);
+  const envByFile: Record<string, string> = {
+    "id-status": "ID_STATUS_FLOW_ID",
+    poll: "POLL_FLOW_ID",
+    feedback: "FEEDBACK_FLOW_ID",
+    "event-register": "EVENT_FLOW_ID",
+    membership: "MEMBERSHIP_FLOW_ID",
+    survey: "SURVEY_FLOW_ID",
+  };
+  const stem = file.replace(/\.json$/, "");
+  const envVar = envByFile[stem] ?? "FLOW_ID";
+  const existing = process.env[envVar];
+
+  let flowId: string;
+  if (existing) {
+    flowId = existing;
+    console.log(`Updating published flow "${name}" ${flowId} (${envVar})...`);
+  } else {
+    console.log(`Creating flow "${name}" (${category}) on WABA ${WABA}...`);
+    const created = await post(
+      `${API}/${WABA}/flows`,
+      JSON.stringify({ name, categories: [category] }),
+      { "Content-Type": "application/json" },
+    );
+    flowId = String(created.id);
+    console.log(`  flow id: ${flowId}`);
+  }
 
   console.log("Uploading Flow JSON...");
   const form = new FormData();
@@ -84,17 +102,7 @@ async function main() {
   await post(`${API}/${flowId}/publish`, "");
   console.log("  published.");
 
-  const envByFile: Record<string, string> = {
-    "id-status": "ID_STATUS_FLOW_ID",
-    poll: "POLL_FLOW_ID",
-    feedback: "FEEDBACK_FLOW_ID",
-    "event-register": "EVENT_FLOW_ID",
-    membership: "MEMBERSHIP_FLOW_ID",
-    survey: "SURVEY_FLOW_ID",
-  };
-  const stem = file.replace(/\.json$/, "");
-  const envVar = envByFile[stem] ?? "FLOW_ID";
-  console.log(`\n✅ Done. Add this to your .env (and Vercel env):\n   ${envVar}=${flowId}\n`);
+  console.log(`\n✅ Done. ${envVar}=${flowId}\n`);
   process.exit(0);
 }
 

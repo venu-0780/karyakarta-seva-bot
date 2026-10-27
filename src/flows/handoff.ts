@@ -11,6 +11,7 @@
 // escalation service wired in src/bot.ts.
 // -----------------------------------------------------------------------------
 import { config } from "../config.js";
+import { feedbackFormData } from "./formText.js";
 import { PARTY_CONTACT } from "../data/sample.js";
 import { makeTicket } from "../services/escalation.js";
 import { backButton, helpButton, L, LB, PH, readLangPref } from "../services/i18n.js";
@@ -63,7 +64,9 @@ export async function escalationStart(ctx: FlowContext): Promise<Reply> {
         te: "🧑‍💼 *కోఆర్డినేటర్ సహాయం*\n\nఫిర్యాదు, సూచన లేదా అభిప్రాయం కింద ఫారమ్‌లో పంపండి.",
         en: "🧑‍💼 *Coordinator help*\n\nSend a complaint, suggestion, or note with the form below.",
       }),
+      data: feedbackFormData(pref),
     },
+    menuButton: backButton(pref),
   };
 }
 

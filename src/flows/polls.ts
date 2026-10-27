@@ -1,4 +1,5 @@
 import { config, thanksSticker } from "../config.js";
+import { pollFormData } from "./formText.js";
 import type { Poll } from "../data/repository.js";
 import { backButton, L, LB, PH, readLangPref } from "../services/i18n.js";
 import { pollChartModel, pollChartUrl } from "../services/pollChart.js";
@@ -48,16 +49,18 @@ export async function pollShow(ctx: FlowContext, id: string): Promise<Reply> {
         cta: LB(pref, PH.vote),
         body: p.q.slice(0, 1024),
         data: {
+          ...pollFormData(pref),
           question: p.q,
           options: p.opts.map((o, i) => ({ id: String(i), title: o.slice(0, 30) })),
         },
       }
     : undefined;
+  const menuButton = flow ? backButton(pref) : undefined;
 
   if (p.opts.length <= 3) {
     await ctx.setState("idle");
     return {
-      ...(flow ? { flow } : {}),
+      ...(flow ? { flow, menuButton } : {}),
       text: `*${p.q}*\n_${LB(pref, { te: "ఒక ఎంపిక నొక్కండి. ఒకసారి మాత్రమే ఓటు వేయగలరు.", en: "Tap one option. You can vote once." })}_`,
       buttons: p.opts.map((o, i) => ({ id: `vote-${id}-${i}`, label: o.slice(0, 20) })),
     };
@@ -66,7 +69,7 @@ export async function pollShow(ctx: FlowContext, id: string): Promise<Reply> {
   // 4-10 options -> list message. Also accept a typed number as a fallback.
   await ctx.setState(`poll:${id}`);
   return {
-    ...(flow ? { flow } : {}),
+    ...(flow ? { flow, menuButton } : {}),
     text: `*${p.q}*\n${LB(pref, { te: "ఒక ఎంపిక నొక్కండి లేదా దాని నంబర్ పంపండి.", en: "Tap an option or reply with its number." })}`,
     list: {
       buttonLabel: LB(pref, PH.vote),

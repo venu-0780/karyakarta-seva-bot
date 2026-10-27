@@ -2,6 +2,7 @@
 // Short in-chat rating. Opens the native Flow when SURVEY_FLOW_ID is set.
 // -----------------------------------------------------------------------------
 import { config } from "../config.js";
+import { surveyFormData } from "./formText.js";
 import { backButton, L, LB, readLangPref } from "../services/i18n.js";
 import type { FlowContext, Reply } from "../types.js";
 
@@ -27,6 +28,8 @@ export async function surveyAsk(ctx: FlowContext): Promise<Reply> {
         te: "⭐ ఈ హెల్ప్‌డెస్క్ గురించి ఒక నిమిషం అభిప్రాయం చెప్పండి.",
         en: "⭐ Take a moment to rate this helpdesk.",
       }),
+      data: surveyFormData(pref),
     },
+    menuButton: backButton(pref),
   };
 }

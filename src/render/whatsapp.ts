@@ -606,7 +606,14 @@ async function postHeaderImage(thread: PostableThread, url?: string): Promise<vo
 export async function renderOne(thread: PostableThread, r: BotResponse): Promise<void> {
   // 0) WhatsApp Flow invitation — handled first and exclusively. Falls back to
   // its own body text if the Flow can't be sent (e.g. unpublished id).
-  if (r.flow && (await postFlow(thread, r.flow))) return;
+  if (r.flow && (await postFlow(thread, r.flow))) {
+    const menu = r.menuButton ?? r.buttons?.find((button) => button.id === "menu");
+    if (menu) {
+      const sent = await postInteractive(thread, whatsAppButtonPayload({ text: menu.label, buttons: [menu] }));
+      if (!sent) await thread.post({ markdown: menu.label });
+    }
+    return;
+  }
   // Flow was missing or WhatsApp rejected it. Continue with the chat prompt
   // on this same response (type-a-number / tap-an-option) so the user is not
   // stuck on an "open the form" line with no form.

@@ -61,11 +61,16 @@ test("docResponse leads with an audio bubble when the edition has one", () => {
 });
 
 test("menu still fits a WhatsApp list after the nearest-office row", async () => {
-  const reply = await menu(makeContext());
-  const one = Array.isArray(reply) ? reply[reply.length - 1] : reply;
-  const rows = one?.list?.sections.flatMap((section) => section.rows) ?? [];
-  assert.equal(rows.length, 10);
-  assert.ok(rows.some((row) => row.id === "near"));
+  for (const lang of ["en", "te"] as const) {
+    const reply = await menu(makeContext({ lang }));
+    const one = Array.isArray(reply) ? reply[reply.length - 1] : reply;
+    const rows = one?.list?.sections.flatMap((section) => section.rows) ?? [];
+    assert.equal(rows.length, 10);
+    assert.ok(rows.some((row) => row.id === "near"));
+    const coordinator = rows.find((row) => row.id === "handoff");
+    assert.ok(coordinator, "coordinator help is a menu row");
+    assert.ok((coordinator?.title.length ?? 99) <= 24, coordinator?.title);
+  }
 });
 
 test("parseStatusUpdates reads sent, delivered, read, and failed", () => {
@@ -112,6 +117,21 @@ test("feedback completion stores a ticket and confirms", async () => {
   assert.match(tickets[0]?.query ?? "", /road is still broken/);
   const saved = await ctx.services.submissions.recent();
   assert.equal(saved[0]?.kind, "feedback");
+});
+
+test("form copy follows the language the user set", async () => {
+  const { idFormData, pollFormData, feedbackFormData, eventFormData, membershipFormData, surveyFormData } =
+    await import("../src/flows/formText.js");
+  const telugu = /[\u0C00-\u0C7F]/;
+  const packs = [idFormData, pollFormData, feedbackFormData, eventFormData, membershipFormData, surveyFormData];
+  for (const pack of packs) {
+    const en = JSON.stringify(pack("en"));
+    const te = JSON.stringify(pack("te"));
+    assert.equal(telugu.test(en), false);
+    assert.equal(telugu.test(te), true);
+    assert.doesNotMatch(te, / \/ /);
+  }
+  assert.match(String(feedbackFormData("both").intro), /\n/);
 });
 
 test("published flow JSON files are multi-screen where designed and have a terminal screen", async () => {

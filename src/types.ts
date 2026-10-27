@@ -128,6 +128,11 @@ export interface BotResponse {
   contacts?: ContactCard[]; // tappable contact cards (helpline / coordinator)
   location?: LocationPin; // a map pin (sent after any text/buttons)
   flow?: FlowMessage; // opens a native WhatsApp Flow form
+  /**
+   * Sent after a form opens. The form replaces the buttons on this response,
+   * so this is the way back to the menu.
+   */
+  menuButton?: Button;
   /** Emoji reaction applied to the inbound message that triggered this reply. */
   reactionEmoji?: string;
   /** Voice note / audio clip (public https URL). Sent as its own bubble. */
