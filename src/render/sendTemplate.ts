@@ -35,7 +35,11 @@ async function graphMessage(toWaId: string, message: Record<string, unknown>): P
   try {
     const res = await fetch(`${config.whatsapp.apiUrl}/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "User-Agent": "karyakarta-seva-bot/1.0",
+      },
       body: JSON.stringify({
         messaging_product: "whatsapp",
         recipient_type: "individual",

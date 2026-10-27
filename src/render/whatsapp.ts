@@ -263,7 +263,11 @@ async function graphSend(thread: PostableThread, message: Record<string, unknown
   try {
     const res = await fetch(`${config.whatsapp.apiUrl}/${config.whatsapp.graphVersion}/${phoneId}/messages`, {
       method: "POST",
-      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${token}`,
+        "User-Agent": "karyakarta-seva-bot/1.0",
+      },
       body: JSON.stringify({ messaging_product: "whatsapp", recipient_type: "individual", ...address, ...message }),
     });
     if (!res.ok) {
@@ -389,7 +393,7 @@ async function uploadMedia(bytes: Uint8Array, mime: string, filename: string): P
   try {
     const res = await fetch(`${config.whatsapp.apiUrl}/${config.whatsapp.graphVersion}/${phoneId}/media`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      headers: { Authorization: `Bearer ${token}`, "User-Agent": "karyakarta-seva-bot/1.0" },
       body: form,
     });
     if (!res.ok) {
