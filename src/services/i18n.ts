@@ -101,6 +101,7 @@ export const PH = {
   noMenu: { te: "వద్దు, మెనూ", en: "No, main menu" },
   tryAnother: { te: "వేరే నంబర్", en: "Try another number" },
   checkAnother: { te: "మరో నంబర్ చూడండి", en: "Check another number" },
+  myNumber: { te: "నా నంబర్", en: "My number" },
 
   // Media
   images: { te: "ఫోటోలు / పోస్టర్లు", en: "Images / posters" },

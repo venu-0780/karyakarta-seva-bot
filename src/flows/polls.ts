@@ -98,14 +98,24 @@ export async function vote(ctx: FlowContext, id: string, optionIndex: number): P
     ];
   }
   const sticker = thanksSticker();
+  const after = (await ctx.services.repos.polls.get(id)) ?? p;
+  const others = Math.max(0, (after.votes[optionIndex] ?? 1) - 1);
+  const othersLine =
+    others > 0
+      ? L(pref, {
+          te: `\nమీతో పాటు మరో *${others.toLocaleString("en-IN")}* మంది ఇదే ఎంచుకున్నారు.`,
+          en: `\nYou and *${others.toLocaleString("en-IN")}* others picked this.`,
+        })
+      : "";
   return [
     {
       reactionEmoji: "✅",
       ...(sticker ? { sticker } : {}),
-      text: L(pref, {
-        te: `✅ ధన్యవాదాలు! *${p.opts[optionIndex]}* కు మీ ఓటు నమోదైంది.`,
-        en: `✅ Thank you! Your vote for *${p.opts[optionIndex]}* is recorded.`,
-      }),
+      text:
+        L(pref, {
+          te: `✅ ధన్యవాదాలు! *${p.opts[optionIndex]}* కు మీ ఓటు నమోదైంది.`,
+          en: `✅ Thank you! Your vote for *${p.opts[optionIndex]}* is recorded.`,
+        }) + othersLine,
     },
     ...toArray(await pollResult(ctx, id)),
   ];

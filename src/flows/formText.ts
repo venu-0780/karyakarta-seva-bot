@@ -3,6 +3,26 @@
 // Short labels stay in one language: WhatsApp caps them at 20–35 characters,
 // and `both` cannot fit. Paragraphs still show both languages when that is the choice.
 import { L, LB, type LangPref, type Phrase } from "../services/i18n.js";
+import { toWaId } from "../services/subscribers.js";
+import type { FlowContext } from "../types.js";
+
+/** Values the form can fill in for the sender. Empty strings leave a field blank. */
+export interface FormPrefill {
+  name: string;
+  phone: string;
+}
+
+/** The sender's 10-digit Indian mobile, or "" when the WhatsApp id is not one. */
+export function senderMobile(userId: string): string {
+  const digits = toWaId(userId) ?? "";
+  const local = digits.replace(/^91(?=\d{10}$)/, "");
+  return /^[6-9]\d{9}$/.test(local) ? local : "";
+}
+
+export function senderPrefill(ctx: FlowContext): FormPrefill {
+  const name = typeof ctx.session.data.displayName === "string" ? ctx.session.data.displayName : "";
+  return { name: name.slice(0, 80), phone: senderMobile(ctx.userId) };
+}
 
 function paragraph(pref: LangPref, phrase: Phrase): string {
   return L(pref, phrase);
@@ -17,8 +37,9 @@ function option(id: string, pref: LangPref, phrase: Phrase): { id: string; title
   return { id, title: short(pref, phrase, 30) };
 }
 
-export function idFormData(pref: LangPref): Record<string, string> {
+export function idFormData(pref: LangPref, prefill?: FormPrefill): Record<string, unknown> {
   return {
+    init_values: { mobile: prefill?.phone ?? "" },
     title: short(pref, { te: "ఐడి స్థితి", en: "ID status" }, 30),
     intro: paragraph(pref, {
       te: "మీ నమోదిత మొబైల్ నంబర్‌తో ఐడి కార్డు స్థితి చూడండి.",
@@ -66,8 +87,13 @@ export function feedbackFormData(pref: LangPref): Record<string, unknown> {
   };
 }
 
-export function eventFormData(pref: LangPref): Record<string, unknown> {
+export function eventFormData(
+  pref: LangPref,
+  meets: { id: string; title: string }[],
+  prefill?: FormPrefill,
+): Record<string, unknown> {
   return {
+    init_values: { name: prefill?.name ?? "", phone: prefill?.phone ?? "" },
     title: short(pref, { te: "నమోదు", en: "Register" }, 30),
     intro: paragraph(pref, {
       te: "ప్రెస్ మీట్‌కు హాజరు నమోదు చేయండి.",
@@ -79,18 +105,15 @@ export function eventFormData(pref: LangPref): Record<string, unknown> {
     event_title: short(pref, { te: "కార్యక్రమం", en: "Event" }, 30),
     constituency_label: short(pref, { te: "నియోజకవర్గం", en: "Constituency" }, 20),
     attendees_label: short(pref, { te: "ఎంతమంది?", en: "How many?" }, 20),
-    day_label: short(pref, { te: "ఏ రోజు?", en: "Which day?" }, 30),
-    slots: [
-      option("today", pref, { te: "ఈ రోజు", en: "Today" }),
-      option("tomorrow", pref, { te: "రేపు", en: "Tomorrow" }),
-      option("either", pref, { te: "ఏదైనా", en: "Either" }),
-    ],
+    day_label: short(pref, { te: "ఏ ప్రెస్ మీట్?", en: "Which press meet?" }, 30),
+    slots: meets.slice(0, 20).map((meet) => ({ id: meet.id, title: meet.title.slice(0, 30) })),
     register_label: short(pref, { te: "నమోదు", en: "Register" }, 35),
   };
 }
 
-export function membershipFormData(pref: LangPref): Record<string, unknown> {
+export function membershipFormData(pref: LangPref, prefill?: FormPrefill): Record<string, unknown> {
   return {
+    init_values: { name: prefill?.name ?? "", phone: prefill?.phone ?? "" },
     title: short(pref, { te: "సభ్యత్వం", en: "Membership" }, 30),
     intro: paragraph(pref, {
       te: "ఐడి కార్డు దరఖాస్తు.",

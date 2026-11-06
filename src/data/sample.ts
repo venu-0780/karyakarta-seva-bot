@@ -17,33 +17,79 @@ import type {
 } from "./repository.js";
 import type { ContactCard, LocationPin } from "../types.js";
 
-export const TODAY = "09 Oct 2026";
-export const YDAY = "08 Oct 2026";
-export const TMRW = "10 Oct 2026";
+// Sample content is dated relative to today in India, so a demo never shows a
+// stale "today". Real content repositories will carry their own dates.
+export type SampleDay = "today" | "yday" | "tmrw";
 
-const TP: Record<"today" | "yday", DocEdition> = {
-  today: { file: "Talking_Points_09-Oct-2026.pdf", pages: 4, size: "312 KB", lang: "Telugu + English", link: "https://www.ysrcongress.com/en/ysr-schemes", head: "Farmer support prices, pension distribution, local body issues" },
-  yday: { file: "Talking_Points_08-Oct-2026.pdf", pages: 3, size: "268 KB", lang: "Telugu + English", link: "https://www.ysrcongress.com/indiramma-illu-677", head: "Welfare scheme delays, flood relief in coastal mandals" },
-};
+const IST_OFFSET_MS = 5.5 * 60 * 60 * 1000;
+const DAY_OFFSET: Record<SampleDay, number> = { today: 0, yday: -1, tmrw: 1 };
+const MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+const WEEKDAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
-const PS: Record<"today" | "yday", DocEdition> = {
-  today: { file: "Praja_Sankalpam_09-Oct-2026.pdf", pages: 8, size: "2.4 MB", lang: "Telugu", link: "https://www.ysrcongress.com/en/ysr-schemes", head: "Evening edition · released 6:00 PM" },
-  yday: { file: "Praja_Sankalpam_08-Oct-2026.pdf", pages: 8, size: "2.1 MB", lang: "Telugu", link: "https://www.ysrcongress.com/jalayagnam-676", head: "Evening edition · released 6:00 PM" },
-};
+function istDate(offsetDays: number): Date {
+  const now = new Date(Date.now() + IST_OFFSET_MS);
+  return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate() + offsetDays));
+}
 
-const PM: Record<"today" | "tmrw" | "yday", PressMeetDay> = {
-  today: { label: "Fri, 9 Oct", list: [
+function parts(offsetDays: number) {
+  const d = istDate(offsetDays);
+  return {
+    dd: String(d.getUTCDate()).padStart(2, "0"),
+    day: d.getUTCDate(),
+    mon: MONTHS[d.getUTCMonth()]!,
+    year: d.getUTCFullYear(),
+    weekday: WEEKDAYS[d.getUTCDay()]!,
+  };
+}
+
+/** "27 Oct 2026" — the first six characters are a button-sized "27 Oct". */
+export function sampleDate(day: SampleDay): string {
+  const p = parts(DAY_OFFSET[day]);
+  return `${p.dd} ${p.mon} ${p.year}`;
+}
+
+/** "Tue, 27 Oct" for schedule headers. */
+function dayLabel(day: SampleDay): string {
+  const p = parts(DAY_OFFSET[day]);
+  return `${p.weekday}, ${p.day} ${p.mon}`;
+}
+
+function fileStamp(day: SampleDay): string {
+  const p = parts(DAY_OFFSET[day]);
+  return `${p.dd}-${p.mon}-${p.year}`;
+}
+
+/** A short future date for sample "expected by" copy, e.g. "30 Oct". */
+function daysFromNow(n: number): string {
+  const p = parts(n);
+  return `${p.day} ${p.mon}`;
+}
+
+function talkingPointsEdition(which: "today" | "yday"): DocEdition {
+  return which === "today"
+    ? { file: `Talking_Points_${fileStamp("today")}.pdf`, pages: 4, size: "312 KB", lang: "Telugu + English", link: "https://www.ysrcongress.com/en/ysr-schemes", head: "Farmer support prices, pension distribution, local body issues" }
+    : { file: `Talking_Points_${fileStamp("yday")}.pdf`, pages: 3, size: "268 KB", lang: "Telugu + English", link: "https://www.ysrcongress.com/indiramma-illu-677", head: "Welfare scheme delays, flood relief in coastal mandals" };
+}
+
+function prajaSankalpamEdition(which: "today" | "yday"): DocEdition {
+  return which === "today"
+    ? { file: `Praja_Sankalpam_${fileStamp("today")}.pdf`, pages: 8, size: "2.4 MB", lang: "Telugu", link: "https://www.ysrcongress.com/en/ysr-schemes", head: "Evening edition · released 6:00 PM" }
+    : { file: `Praja_Sankalpam_${fileStamp("yday")}.pdf`, pages: 8, size: "2.1 MB", lang: "Telugu", link: "https://www.ysrcongress.com/jalayagnam-676", head: "Evening edition · released 6:00 PM" };
+}
+
+const PM_LIST: Record<SampleDay, PressMeetDay["list"]> = {
+  today: [
     { time: "11:00 AM", who: "Party Spokesperson", topic: "Pension distribution", where: "Central Office, Tadepalli", status: "live", link: "https://www.ysrcongress.com/indiramma-illu-677" },
     { time: "4:30 PM", who: "Guntur District President", topic: "Road repairs in Guntur", where: "District Party Office, Guntur", status: "up", link: "https://www.ysrcongress.com/free-electricity-farmers-672" },
-  ]},
-  tmrw: { label: "Sat, 10 Oct", list: [
+  ],
+  tmrw: [
     { time: "9:00 AM", who: "SRK Sir", topic: "Local body elections preparation", where: "Central Office, Tadepalli", status: "up", link: "https://www.ysrcongress.com/jalayagnam-676" },
     { time: "12:00 PM", who: "Perni Nani", topic: "Farmer support prices", where: "Press Club, Vijayawada", status: "up", link: "https://www.ysrcongress.com/2-rupees-rice-673" },
-  ]},
-  yday: { label: "Thu, 8 Oct", list: [
+  ],
+  yday: [
     { time: "10:00 AM", who: "SRK Sir", topic: "Welfare scheme delays", where: "Central Office, Tadepalli", status: "rec", link: "https://www.ysrcongress.com/rajiv-arogya-sri-671" },
     { time: "3:00 PM", who: "Perni Nani", topic: "Flood relief response", where: "Press Club, Vijayawada", status: "rec", link: "https://www.ysrcongress.com/en/ysr-schemes" },
-  ]},
+  ],
 };
 
 const SCHEME_IMAGES = {
@@ -103,7 +149,7 @@ const POLLS: Poll[] = [
 ];
 
 const IDS: Record<string, MembershipRecord> = {
-  "9876543210": { name: "K. Ravi Kumar", mid: "YSR-GNT-204871", ac: "Guntur West", stage: 3, where: "Guntur West constituency office (expected 12 Oct)" },
+  "9876543210": { name: "K. Ravi Kumar", mid: "YSR-GNT-204871", ac: "Guntur West", stage: 3, get where() { return `Guntur West constituency office (expected ${daysFromNow(3)})`; } },
   "9123456780": { name: "P. Lakshmi Devi", mid: "YSR-NLR-118302", ac: "Nellore City", stage: 0, where: "Verification usually takes 5–7 days" },
   "9000000001": {
     name: "S. Venkata Reddy", mid: "YSR-KDP-077615", ac: "Kadapa", stage: 4,
@@ -151,9 +197,9 @@ const voteLedger = new Map<string, number>(); // key: `${pollId}:${userId}` -> o
 
 export function createSampleRepositories(): Repositories {
   const content: ContentRepo = {
-    async talkingPoints(which) { return TP[which]; },
-    async prajaSankalpam(which) { return PS[which]; },
-    async pressMeets(day) { return PM[day]; },
+    async talkingPoints(which) { return talkingPointsEdition(which); },
+    async prajaSankalpam(which) { return prajaSankalpamEdition(which); },
+    async pressMeets(day) { return { label: dayLabel(day), list: PM_LIST[day] }; },
     async jaganMeets() { return JPM; },
     async jaganMeet(id) { return JPM.find((m) => m.id === id); },
   };

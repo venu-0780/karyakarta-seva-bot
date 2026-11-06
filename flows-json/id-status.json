@@ -11,7 +11,12 @@
         "intro": { "type": "string", "__example__": "Check your ID card status with your registered mobile number." },
         "mobile_label": { "type": "string", "__example__": "Mobile number" },
         "mobile_help": { "type": "string", "__example__": "10 digits, e.g. 9876543210" },
-        "submit_label": { "type": "string", "__example__": "Check status" }
+        "submit_label": { "type": "string", "__example__": "Check status" },
+        "init_values": {
+          "type": "object",
+          "properties": { "mobile": { "type": "string" } },
+          "__example__": { "mobile": "9876543210" }
+        }
       },
       "layout": {
         "type": "SingleColumnLayout",
@@ -20,6 +25,7 @@
           {
             "type": "Form",
             "name": "form",
+            "init-values": "${data.init_values}",
             "children": [
               {
                 "type": "TextInput",

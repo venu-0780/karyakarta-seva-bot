@@ -1,5 +1,5 @@
 import { config, thanksSticker } from "../config.js";
-import { idFormData } from "./formText.js";
+import { idFormData, senderMobile, senderPrefill } from "./formText.js";
 import { PARTY_CONTACT } from "../data/sample.js";
 import { STAGES } from "../data/repository.js";
 import { backButton, L, LB, PH, readLangPref, t } from "../services/i18n.js";
@@ -21,6 +21,22 @@ const STAGE_LABELS = [
   { te: "పంపించారు", en: "Dispatched" },
   { te: "తీసుకోవడానికి సిద్ధం", en: "Ready to collect" },
 ] as const;
+
+/** "K. Ravi Kumar" -> "K. R*** K****". */
+export function maskName(name: string): string {
+  return name
+    .split(/\s+/)
+    .map((word) => (word.length <= 2 ? word : `${word[0]}${"*".repeat(word.length - 1)}`))
+    .join(" ");
+}
+
+/** "YSR-GNT-204871" -> "YSR-GNT-2***71". */
+export function maskMemberId(mid: string): string {
+  const cut = mid.lastIndexOf("-");
+  const tail = mid.slice(cut + 1);
+  if (tail.length < 4) return mid;
+  return `${mid.slice(0, cut + 1)}${tail[0]}${"*".repeat(tail.length - 3)}${tail.slice(-2)}`;
+}
 
 /** Flow 6 — confirm before asking for a number. */
 export async function idOffer(ctx: FlowContext): Promise<Reply> {
@@ -44,12 +60,20 @@ export async function idAsk(ctx: FlowContext): Promise<Reply> {
   const pref = readLangPref(ctx.session.data);
   // Chat prompt is always attached. The renderer sends the native Flow when
   // WhatsApp accepts it, and this prompt when it does not.
+  const own = senderMobile(ctx.userId);
   const chatPrompt = {
     text: L(pref, {
-      te: "🪪 *ఐడి కార్డు స్థితి* · 2లో 2వ అడుగు\n\nమీరు నమోదు చేసిన *10 అంకెల మొబైల్ నంబర్* పంపండి.\n_ఉదాహరణ: 9876543210_",
-      en: "🪪 *ID card status* · step 2 of 2\n\nSend the *10-digit mobile number* you registered with.\n_Example: 9876543210_",
+      te: own
+        ? "🪪 *ఐడి కార్డు స్థితి*\n\nఈ WhatsApp నంబర్‌తో నమోదు చేశారా? *నా నంబర్* నొక్కండి. లేకపోతే మీరు నమోదు చేసిన *10 అంకెల మొబైల్ నంబర్* పంపండి."
+        : "🪪 *ఐడి కార్డు స్థితి*\n\nమీరు నమోదు చేసిన *10 అంకెల మొబైల్ నంబర్* పంపండి.\n_ఉదాహరణ: 9876543210_",
+      en: own
+        ? "🪪 *ID card status*\n\nRegistered with this WhatsApp number? Tap *My number*. Otherwise send the *10-digit mobile number* you registered with."
+        : "🪪 *ID card status*\n\nSend the *10-digit mobile number* you registered with.\n_Example: 9876543210_",
     }),
-    buttons: [backButton(pref)],
+    buttons: [
+      ...(own ? [{ id: "id-me", label: LB(pref, PH.myNumber) }] : []),
+      backButton(pref),
+    ],
   };
   // Native form when a Flow is configured. If WhatsApp rejects it (draft
   // account, unpublished), the renderer sends chatPrompt instead.
@@ -65,7 +89,7 @@ export async function idAsk(ctx: FlowContext): Promise<Reply> {
           te: "🪪 *ఐడి కార్డు స్థితి*\n\nకింద ఉన్న బటన్ నొక్కి ఫారమ్ తెరవండి.",
           en: "🪪 *ID card status*\n\nTap the button below to open the form.",
         }),
-        data: idFormData(pref),
+        data: idFormData(pref, senderPrefill(ctx)),
         footer: LB(pref, PH.formBack),
       },
     };
@@ -126,6 +150,18 @@ export async function idCheck(ctx: FlowContext, raw: string): Promise<Reply> {
     return `${mark} ${LB(pref, STAGE_LABELS[i]!)}${i === r.stage ? currentTag : ""}`;
   }).join("\n");
 
+  // Anyone can type any number. Full name and member ID go only to the person
+  // whose WhatsApp number it is; others see the stage with those masked.
+  const own = num === senderMobile(ctx.userId);
+  const shownName = own ? r.name : maskName(r.name);
+  const shownMid = own ? r.mid : maskMemberId(r.mid);
+  const maskedNote = own
+    ? ""
+    : `\n\n_${L(pref, {
+        te: "ఇది వేరే నంబర్ కాబట్టి పేరు, ఐడి దాచాం.",
+        en: "Name and ID are partly hidden because this is not your WhatsApp number.",
+      })}_`;
+
   const nameLbl = LB(pref, { te: "పేరు", en: "Name" });
   const midLbl = LB(pref, { te: "సభ్య ఐడి", en: "Member ID" });
   const acLbl = LB(pref, { te: "నియోజకవర్గం", en: "Constituency" });
@@ -138,9 +174,10 @@ export async function idCheck(ctx: FlowContext, raw: string): Promise<Reply> {
     ...(sticker ? { sticker } : {}),
     text:
       `🪪 *${title}* · ${masked}\n\n` +
-      `${nameLbl}: *${r.name}*\n${midLbl}: *${r.mid}*\n${acLbl}: *${r.ac}*\n\n` +
+      `${nameLbl}: *${shownName}*\n${midLbl}: *${shownMid}*\n${acLbl}: *${r.ac}*\n\n` +
       `${timeline}\n\n` +
-      `${r.stage === 4 ? collectLbl : "ℹ️ "}${r.where}`,
+      `${r.stage === 4 ? collectLbl : "ℹ️ "}${r.where}` +
+      maskedNote,
     buttons: [{ id: "id", label: LB(pref, PH.checkAnother) }, backButton(pref)],
     // When the card is ready, drop a map pin to the collection center.
     ...(r.stage === 4 && r.geo ? { location: r.geo } : {}),

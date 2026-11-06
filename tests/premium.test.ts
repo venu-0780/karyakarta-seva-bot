@@ -117,13 +117,39 @@ test("feedback completion stores a ticket and confirms", async () => {
   assert.match(tickets[0]?.query ?? "", /road is still broken/);
   const saved = await ctx.services.submissions.recent();
   assert.equal(saved[0]?.kind, "feedback");
+  assert.match(text ?? "", /Ticket: \*#[A-Z0-9]+\*/);
+});
+
+test("event completion names the press meet that was picked", async () => {
+  const ctx = makeContext();
+  const reply = await completeForm(ctx, "event:tmrw", {
+    name: "Ravi",
+    phone: "9876543210",
+    constituency: "Guntur West",
+    attendees: "2",
+    slot: "1",
+  });
+  const text = Array.isArray(reply) ? reply[0]?.text : reply?.text;
+  assert.match(text ?? "", /12:00 PM · Perni Nani/);
+  const saved = await ctx.services.submissions.recent();
+  assert.match(saved[0]?.fields.meet ?? "", /Perni Nani/);
+});
+
+test("forms pre-fill the sender's name and number", async () => {
+  const { senderPrefill, eventFormData } = await import("../src/flows/formText.js");
+  const ctx = makeContext({ data: { displayName: "Ravi Kumar" } });
+  ctx.userId = "919876543210";
+  const prefill = senderPrefill(ctx);
+  assert.deepEqual(prefill, { name: "Ravi Kumar", phone: "9876543210" });
+  assert.deepEqual(eventFormData("en", [], prefill).init_values, prefill);
 });
 
 test("form copy follows the language the user set", async () => {
   const { idFormData, pollFormData, feedbackFormData, eventFormData, membershipFormData, surveyFormData } =
     await import("../src/flows/formText.js");
   const telugu = /[\u0C00-\u0C7F]/;
-  const packs = [idFormData, pollFormData, feedbackFormData, eventFormData, membershipFormData, surveyFormData];
+  const eventPack = (pref: "en" | "te") => eventFormData(pref, [{ id: "0", title: "11:00 AM · Farmers" }]);
+  const packs = [idFormData, pollFormData, feedbackFormData, eventPack, membershipFormData, surveyFormData];
   for (const pack of packs) {
     const en = JSON.stringify(pack("en"));
     const te = JSON.stringify(pack("te"));

@@ -1,4 +1,4 @@
-import { BRAND_IMAGES, TODAY, TMRW, YDAY } from "../data/sample.js";
+import { BRAND_IMAGES, sampleDate } from "../data/sample.js";
 import { eventInvite } from "./events.js";
 import { backButton, L, LB, PH, readLangPref, type LangPref, type Phrase } from "../services/i18n.js";
 import type { Button, FlowContext, Reply } from "../types.js";
@@ -32,9 +32,9 @@ export async function pressMeet(ctx: FlowContext): Promise<Reply> {
     text: L(pref, PROMPT),
     headerImage: BRAND_IMAGES.news,
     buttons: [
-      { id: "pm-today", label: `${LB(pref, PH.today)} · ${TODAY.slice(0, 6)}` },
-      { id: "pm-tmrw", label: `${LB(pref, PH.tomorrow)} · ${TMRW.slice(0, 6)}` },
-      { id: "pm-yday", label: `${LB(pref, PH.yesterday)} · ${YDAY.slice(0, 6)}` },
+      { id: "pm-today", label: `${LB(pref, PH.today)} · ${sampleDate("today").slice(0, 6)}` },
+      { id: "pm-tmrw", label: `${LB(pref, PH.tomorrow)} · ${sampleDate("tmrw").slice(0, 6)}` },
+      { id: "pm-yday", label: `${LB(pref, PH.yesterday)} · ${sampleDate("yday").slice(0, 6)}` },
     ],
   };
 }
@@ -61,6 +61,6 @@ export async function pressMeetDay(ctx: FlowContext, day: "today" | "tmrw" | "yd
     .map((k) => ({ id: `pm-${k}`, label: LB(pref, DAY_WORD[k]) }));
 
   const schedule = { text: body, buttons: [...others, backButton(pref)] };
-  const invite = eventInvite(ctx);
+  const invite = eventInvite(ctx, day, list);
   return invite ? [schedule, invite] : schedule;
 }

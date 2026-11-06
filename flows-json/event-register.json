@@ -13,17 +13,21 @@
         "event_title": { "type": "string", "__example__": "Event" },
         "constituency_label": { "type": "string", "__example__": "Constituency" },
         "attendees_label": { "type": "string", "__example__": "How many?" },
-        "day_label": { "type": "string", "__example__": "Which day?" },
+        "day_label": { "type": "string", "__example__": "Which press meet?" },
         "slots": {
           "type": "array",
           "items": { "type": "object", "properties": { "id": { "type": "string" }, "title": { "type": "string" } } },
           "__example__": [
-            { "id": "today", "title": "Today" },
-            { "id": "tomorrow", "title": "Tomorrow" },
-            { "id": "either", "title": "Either" }
+            { "id": "0", "title": "11:00 AM · Farmers' support" },
+            { "id": "1", "title": "4:00 PM · Welcome schemes" }
           ]
         },
-        "register_label": { "type": "string", "__example__": "Register" }
+        "register_label": { "type": "string", "__example__": "Register" },
+        "init_values": {
+          "type": "object",
+          "properties": { "name": { "type": "string" }, "phone": { "type": "string" } },
+          "__example__": { "name": "Ravi", "phone": "9876543210" }
+        }
       },
       "layout": {
         "type": "SingleColumnLayout",
@@ -32,6 +36,7 @@
           {
             "type": "Form",
             "name": "form",
+            "init-values": "${data.init_values}",
             "children": [
               { "type": "TextInput", "name": "name", "label": "${data.name_label}", "required": true },
               { "type": "TextInput", "name": "phone", "label": "${data.phone_label}", "input-type": "phone", "required": true },

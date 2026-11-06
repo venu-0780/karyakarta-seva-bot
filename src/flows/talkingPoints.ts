@@ -1,5 +1,5 @@
 import type { DocEdition } from "../data/repository.js";
-import { BRAND_IMAGES, TODAY, YDAY } from "../data/sample.js";
+import { BRAND_IMAGES, sampleDate } from "../data/sample.js";
 import { backButton, L, LB, PH, readLangPref, type LangPref } from "../services/i18n.js";
 import type { BotResponse, FlowContext, Reply } from "../types.js";
 
@@ -28,7 +28,7 @@ export async function talkingPoints(ctx: FlowContext, which: "today" | "yday" = 
   const pref = readLangPref(ctx.session.data);
   const d = await ctx.services.repos.content.talkingPoints(which);
   const title = LB(pref, { te: "టాకింగ్ పాయింట్స్", en: "Talking points" });
-  const label = `📌 ${title} · ${which === "today" ? TODAY : YDAY}`;
+  const label = `📌 ${title} · ${sampleDate(which)}`;
   const buttons =
     which === "today"
       ? [{ id: "tp-y", label: LB(pref, PH.ydaysPoints) }, backButton(pref)]

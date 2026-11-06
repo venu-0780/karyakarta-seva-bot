@@ -1,3 +1,4 @@
+import { timingSafeEqual } from "node:crypto";
 import { after } from "next/server";
 import { handleFlowCompletion, handleWhatApiWebhook } from "../../../../src/bot.js";
 import { markProcessed } from "../../../../src/services/dedup.js";
@@ -33,6 +34,19 @@ function challengeFrom(request: Request, raw?: string): string | null {
   return null;
 }
 
+/**
+ * WhatAPI does not sign events. When WEBHOOK_SECRET is set, the webhook URL
+ * registered in WhatAPI must carry `?key=<secret>`; other POSTs are dropped.
+ */
+function webhookKeyMatches(request: Request): boolean {
+  const expected = process.env.WEBHOOK_SECRET?.trim();
+  if (!expected) return true;
+  const given = new URL(request.url).searchParams.get("key") ?? "";
+  const a = Buffer.from(given);
+  const b = Buffer.from(expected);
+  return a.length === b.length && timingSafeEqual(a, b);
+}
+
 // Node.js runtime (not edge): the WhatsApp adapter and node-redis need Node
 // APIs. force-dynamic keeps this from ever being statically optimized, and
 // maxDuration gives the post-response send work (incl. media) room to finish.
@@ -57,6 +71,8 @@ export async function POST(request: Request) {
   // if (rejected) return rejected;
   const challenge = challengeFrom(request, raw);
   if (challenge != null) return plain(challenge);
+  // Still 200: a non-200 makes WhatAPI disable the webhook.
+  if (!webhookKeyMatches(request)) return plain("OK");
 
   let payload: unknown;
   try {

@@ -5,7 +5,9 @@
 // -----------------------------------------------------------------------------
 import { thanksSticker } from "../config.js";
 import { PARTY_CONTACT } from "../data/sample.js";
-import { makeTicket } from "../services/escalation.js";
+import type { PressMeet } from "../data/repository.js";
+import { makeTicket, ticketRef } from "../services/escalation.js";
+import type { EventDay } from "./events.js";
 import { backButton, L, readLangPref } from "../services/i18n.js";
 import type { FlowContext, Reply } from "../types.js";
 
@@ -24,6 +26,20 @@ function fieldsOf(payload: Record<string, unknown>): Record<string, string> {
     if (text) out[key] = text;
   }
   return out;
+}
+
+const EVENT_DAYS = new Set(["today", "tmrw", "yday"]);
+
+/** The meet picked in the event form: token carries the day, `slot` the index in that day's list. */
+async function chosenMeet(
+  ctx: FlowContext,
+  day: string,
+  slot: string | undefined,
+): Promise<{ label: string; meet: PressMeet } | undefined> {
+  if (!EVENT_DAYS.has(day) || !slot || !/^\d+$/.test(slot)) return undefined;
+  const { label, list } = await ctx.services.repos.content.pressMeets(day as EventDay);
+  const meet = list[Number(slot)];
+  return meet ? { label, meet } : undefined;
 }
 
 /**
@@ -46,10 +62,11 @@ export async function completeForm(
     const phone = fields.phone ? `Phone: ${fields.phone}` : "";
     const query = [`[${category}] ${details}`, callback, phone].filter(Boolean).join("\n");
     const history = ((ctx.session.data.history as string[] | undefined) ?? []).slice(-3);
+    const ticket = makeTicket({ userId: ctx.userId, lang: pref, query, history });
+    let ref = "";
     try {
-      await ctx.services.escalation.create(
-        makeTicket({ userId: ctx.userId, lang: pref, query, history }),
-      );
+      await ctx.services.escalation.create(ticket);
+      ref = ticketRef(ticket.id);
     } catch {
       // confirmation still follows
     }
@@ -60,25 +77,34 @@ export async function completeForm(
       reactionEmoji: "🙏",
       ...(sticker ? { sticker } : {}),
       text: L(pref, {
-        te: "✅ ధన్యవాదాలు. మీ సందేశం కోఆర్డినేటర్‌కు చేరింది. వారు త్వరలో సంప్రదిస్తారు.",
-        en: "✅ Thank you. Your message is with the coordinator, and they'll get back to you.",
+        te:
+          "✅ ధన్యవాదాలు. మీ సందేశం కోఆర్డినేటర్‌కు చేరింది. వారు త్వరలో సంప్రదిస్తారు." +
+          (ref ? `\nటికెట్: *${ref}*` : ""),
+        en:
+          "✅ Thank you. Your message is with the coordinator, and they'll get back to you." +
+          (ref ? `\nTicket: *${ref}*` : ""),
       }),
       contacts: [PARTY_CONTACT],
       buttons: [backButton(pref)],
     };
   }
 
-  if (token === "event") {
-    await ctx.services.submissions.add({ kind: "event", userId: ctx.userId, fields });
+  if (token === "event" || token.startsWith("event:")) {
+    const meet = await chosenMeet(ctx, token.slice(6), fields.slot);
+    const saved = meet
+      ? { ...fields, meet: `${meet.label} ${meet.meet.time} · ${meet.meet.who} · ${meet.meet.topic}` }
+      : fields;
+    await ctx.services.submissions.add({ kind: "event", userId: ctx.userId, fields: saved });
     await ctx.setState("idle");
     await ctx.services.analytics.track("form:event", ctx.userId);
     const name = fields.name || "";
+    const which = meet ? `\n\n📢 *${meet.meet.time} · ${meet.meet.who}*\n${meet.meet.topic}\n_${meet.meet.where}_` : "";
     return {
       reactionEmoji: "✅",
       ...(sticker ? { sticker } : {}),
       text: L(pref, {
-        te: `✅ నమోదు అయింది${name ? `, *${name}*` : ""}. మీ స్థానం నిర్ధారణ కోసం కోఆర్డినేటర్ సంప్రదిస్తారు.`,
-        en: `✅ You're registered${name ? `, *${name}*` : ""}. A coordinator will confirm your place.`,
+        te: `✅ నమోదు అయింది${name ? `, *${name}*` : ""}. మీ స్థానం నిర్ధారణ కోసం కోఆర్డినేటర్ సంప్రదిస్తారు.${which}`,
+        en: `✅ You're registered${name ? `, *${name}*` : ""}. A coordinator will confirm your place.${which}`,
       }),
       buttons: [backButton(pref)],
     };

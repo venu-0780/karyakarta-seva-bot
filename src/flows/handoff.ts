@@ -13,7 +13,7 @@
 import { config } from "../config.js";
 import { feedbackFormData } from "./formText.js";
 import { PARTY_CONTACT } from "../data/sample.js";
-import { makeTicket } from "../services/escalation.js";
+import { makeTicket, ticketRef } from "../services/escalation.js";
 import { backButton, helpButton, L, LB, PH, readLangPref } from "../services/i18n.js";
 import type { FlowContext, Reply } from "../types.js";
 
@@ -88,8 +88,10 @@ export async function escalationSubmit(ctx: FlowContext, query: string): Promise
 
   // create() persists AND notifies the coordinator (wired in bot.ts). Best
   // effort — a failure here must not block the member's confirmation.
+  let ref = "";
   try {
     await ctx.services.escalation.create(ticket);
+    ref = ticketRef(ticket.id);
   } catch {
     // ignore — confirmation + helpline still follow
   }
@@ -101,9 +103,11 @@ export async function escalationSubmit(ctx: FlowContext, query: string): Promise
       text: L(pref, {
         te:
           "✅ ధన్యవాదాలు! మీ సందేశాన్ని మీ ప్రాంత కోఆర్డినేటర్‌కు పంపాం. వారు త్వరలో మిమ్మల్ని సంప్రదిస్తారు.\n" +
+          (ref ? `టికెట్: *${ref}*\n` : "") +
           "అత్యవసరమైతే కింద ఉన్న హెల్ప్‌లైన్‌కు కాల్ చేయవచ్చు.",
         en:
           "✅ Thank you! I've passed your message to your area coordinator — they'll reach out to you soon.\n" +
+          (ref ? `Ticket: *${ref}*\n` : "") +
           "If it's urgent, you can call the helpline below.",
       }),
       contacts: [PARTY_CONTACT],

@@ -14,7 +14,12 @@
         "constituency_label": { "type": "string", "__example__": "Constituency" },
         "address_label": { "type": "string", "__example__": "Address" },
         "consent_label": { "type": "string", "__example__": "I agree to be contacted" },
-        "apply_label": { "type": "string", "__example__": "Apply" }
+        "apply_label": { "type": "string", "__example__": "Apply" },
+        "init_values": {
+          "type": "object",
+          "properties": { "name": { "type": "string" }, "phone": { "type": "string" } },
+          "__example__": { "name": "Ravi", "phone": "9876543210" }
+        }
       },
       "layout": {
         "type": "SingleColumnLayout",
@@ -23,6 +28,7 @@
           {
             "type": "Form",
             "name": "form",
+            "init-values": "${data.init_values}",
             "children": [
               { "type": "TextInput", "name": "name", "label": "${data.name_label}", "required": true },
               { "type": "TextInput", "name": "phone", "label": "${data.phone_label}", "input-type": "phone", "required": true },

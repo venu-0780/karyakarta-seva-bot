@@ -52,6 +52,11 @@ export function makeTicket(
   return { ...fields, id: `esc-${Date.now()}-${rand}`, createdAt: new Date().toISOString() };
 }
 
+/** Short reference a member can quote, e.g. `#K3F9QZ`. */
+export function ticketRef(id: string): string {
+  return `#${(id.split("-").pop() ?? id).toUpperCase()}`;
+}
+
 /** In-process store for local dev / single instance. Lost on restart. */
 export class MemoryEscalationStore implements EscalationStore {
   private tickets: EscalationTicket[] = [];

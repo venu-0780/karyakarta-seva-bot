@@ -4,6 +4,7 @@ import { test } from "node:test";
 import { runAction, runText } from "../src/router.js";
 import type { BotResponse, Reply } from "../src/types.js";
 import { makeContext } from "./helpers.js";
+import { sampleDate } from "../src/data/sample.js";
 
 const arr = (r: Reply): BotResponse[] => (Array.isArray(r) ? r : [r]);
 const allText = (r: Reply): string =>
@@ -35,13 +36,46 @@ test("numeric shortcut 3 opens the press-meet day picker", async () => {
 test("natural language 'tomorrow press meet' deep-links to tomorrow", async () => {
   const ctx = makeContext();
   const reply = await runText(ctx, "tomorrow press meet");
-  assert.match(allText(reply), /Sat, 10 Oct/);
+  // Headers use "Sat, 7 Nov"; sampleDate is zero-padded "07 Nov 2026".
+  const [dd, mon] = sampleDate("tmrw").split(" ");
+  assert.match(allText(reply), new RegExp(`Tomorrow · .*, ${Number(dd)} ${mon}`));
 });
 
-test("a phone number triggers the ID lookup", async () => {
+test("a phone number triggers the ID lookup, masked when it is someone else's", async () => {
   const ctx = makeContext();
   const reply = await runText(ctx, "9876543210");
+  assert.match(allText(reply), /K\. R\*\*\* K\*\*\*\*/);
+  assert.match(allText(reply), /Dispatched/);
+  assert.doesNotMatch(allText(reply), /Ravi Kumar/);
+});
+
+test("the sender's own number shows the full name and member ID", async () => {
+  const ctx = makeContext();
+  ctx.userId = "919876543210";
+  const reply = await runAction(ctx, "id-me");
   assert.match(allText(reply), /K\. Ravi Kumar/);
+  assert.match(allText(reply), /YSR-GNT-204871/);
+});
+
+test("the ID menu item asks for the number straight away and offers My number", async () => {
+  const ctx = makeContext();
+  ctx.userId = "919876543210";
+  const reply = await runAction(ctx, "id");
+  assert.equal(ctx.session.state, "id");
+  assert.ok(allButtonIds(reply).includes("id-me"));
+});
+
+test("a short navigation phrase leaves the handoff; a long message is filed", async () => {
+  const ctx = makeContext();
+  await runText(ctx, "I want to talk to a coordinator");
+  const nav = await runText(ctx, "press meet");
+  assert.notEqual(ctx.session.state, "handoff");
+  assert.ok(allButtonIds(nav).includes("pm-today"));
+
+  await runText(ctx, "I want to talk to a coordinator");
+  const filed = await runText(ctx, "the press meet venue in Guntur had no water or seating for anyone");
+  assert.equal(ctx.session.state, "idle");
+  assert.match(allText(filed), /Ticket: \*#[A-Z0-9]+\*/);
 });
 
 test("unmatched text offers the coordinator handoff", async () => {

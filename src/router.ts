@@ -3,6 +3,7 @@ import { membershipAsk } from "./flows/membership.js";
 import { askLocation } from "./flows/nearest.js";
 import { surveyAsk } from "./flows/survey.js";
 import { idAsk, idCheck, idOffer, isNo, isYes } from "./flows/idCard.js";
+import { senderMobile } from "./flows/formText.js";
 import { jagan, jaganByDate, jaganByTopic, jaganMeet, jaganTopic } from "./flows/jaganMeets.js";
 import { media, mediaGrid, sendMedia } from "./flows/media.js";
 import { chooseLanguage, help, menu, setLanguage } from "./flows/menu.js";
@@ -11,7 +12,7 @@ import { prajaSankalpam } from "./flows/prajaSankalpam.js";
 import { pressMeet, pressMeetDay } from "./flows/pressMeet.js";
 import { talkingPoints } from "./flows/talkingPoints.js";
 import { config } from "./config.js";
-import { TODAY, YDAY } from "./data/sample.js";
+import { sampleDate } from "./data/sample.js";
 import { detectIntent, type IntentAction } from "./services/intents.js";
 import { classify } from "./services/llmRouter.js";
 import { groundedAnswer } from "./services/llmAnswer.js";
@@ -63,6 +64,7 @@ export async function runAction(ctx: FlowContext, act: string): Promise<Reply> {
   }
 
   if (act === "id" || act === "id-yes") return idAsk(ctx);
+  if (act === "id-me") return idCheck(ctx, senderMobile(ctx.userId));
 
   if (act === "near") return askLocation(ctx);
   if (act === "survey") return surveyAsk(ctx);
@@ -193,12 +195,12 @@ async function factsFor(ctx: FlowContext, action: IntentAction, query?: string):
   if (action === "tp" || action === "tp-y") {
     const which = action === "tp-y" ? "yday" : "today";
     const d = await content.talkingPoints(which);
-    return `Talking points for ${which === "yday" ? YDAY : TODAY}. Key themes: ${d.head}. Source: ${d.pages}-page PDF in ${d.lang}.`;
+    return `Talking points for ${sampleDate(which)}. Key themes: ${d.head}. Source: ${d.pages}-page PDF in ${d.lang}.`;
   }
   if (action === "ps" || action === "ps-y") {
     const which = action === "ps-y" ? "yday" : "today";
     const d = await content.prajaSankalpam(which);
-    return `Praja Sankalpam evening paper for ${which === "yday" ? YDAY : TODAY}. ${d.head}. Source: ${d.pages}-page PDF in ${d.lang}.`;
+    return `Praja Sankalpam evening paper for ${sampleDate(which)}. ${d.head}. Source: ${d.pages}-page PDF in ${d.lang}.`;
   }
   if (action === "pm" || action === "pm-today" || action === "pm-tmrw" || action === "pm-yday") {
     const day = action === "pm-tmrw" ? "tmrw" : action === "pm-yday" ? "yday" : "today";
@@ -338,9 +340,14 @@ export async function runText(ctx: FlowContext, raw: string): Promise<Reply> {
   if (/^(help|\?|సహాయం|సాయం|సహాయము)$/i.test(s)) return help(ctx);
 
   // Human handoff: once the member tapped "Talk to coordinator" we're waiting
-  // for their question — capture this message as the escalation. (Greetings /
-  // help / language words above already provide an escape hatch.)
-  if (ctx.session.state === "handoff") return escalationSubmit(ctx, s);
+  // for their question — capture this message as the escalation. A short
+  // navigation phrase ("press meet", "polls") still leaves the handoff; a
+  // longer message is the question even when it mentions a feature.
+  if (ctx.session.state === "handoff") {
+    const shortNav = s.split(/\s+/).length <= 4 ? detectIntent(s) : undefined;
+    if (!shortNav) return escalationSubmit(ctx, s);
+    await ctx.setState("idle");
+  }
 
   // Resolve answers to the ID confirmation before looking for a new intent.
   if (ctx.session.state === "id-confirm") {
@@ -355,7 +362,7 @@ export async function runText(ctx: FlowContext, raw: string): Promise<Reply> {
   if (intent) {
     if (intent === "id") {
       await ctx.services.analytics.track("use:id", ctx.userId);
-      return ctx.session.state === "id" ? idAsk(ctx) : idOffer(ctx);
+      return idAsk(ctx);
     }
     // If the user ASKED about the content (not just navigated), add a grounded
     // summary on top of the normal flow reply.

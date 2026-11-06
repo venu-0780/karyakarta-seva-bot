@@ -79,6 +79,9 @@ async function alreadySeen(id: string, status: DeliveryStatus): Promise<boolean>
 export async function recordDeliveries(updates: StatusUpdate[]): Promise<void> {
   for (const update of updates) {
     if (await alreadySeen(update.id, update.status)) continue;
+    if (update.status === "failed") {
+      console.error("WhatsApp delivery failed", update.id, update.error ?? "no error detail");
+    }
     if (config.redisUrl) {
       try {
         const redis = await getRedis();
@@ -90,9 +93,6 @@ export async function recordDeliveries(updates: StatusUpdate[]): Promise<void> {
       continue;
     }
     memoryCounts.set(update.status, (memoryCounts.get(update.status) ?? 0) + 1);
-    if (update.status === "failed" && update.error) {
-      console.error("WhatsApp delivery failed", update.id, update.error);
-    }
   }
 }
 

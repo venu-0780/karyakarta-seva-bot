@@ -420,7 +420,19 @@ async function postContacts(thread: PostableThread, contacts: ContactCard[]): Pr
  * still gets HTTP 200 from the BSP, and treating that as success skips the
  * text fallback — the user sees typing and then nothing.
  */
+const flowStatusCache = new Map<string, { ok: boolean; until: number }>();
+const FLOW_OK_TTL_MS = 10 * 60 * 1000;
+const FLOW_FAIL_TTL_MS = 60 * 1000;
+
 async function flowCanBeSent(flowId: string): Promise<boolean> {
+  const cached = flowStatusCache.get(flowId);
+  if (cached && cached.until > Date.now()) return cached.ok;
+  const ok = await fetchFlowSendable(flowId);
+  flowStatusCache.set(flowId, { ok, until: Date.now() + (ok ? FLOW_OK_TTL_MS : FLOW_FAIL_TTL_MS) });
+  return ok;
+}
+
+async function fetchFlowSendable(flowId: string): Promise<boolean> {
   const token = config.whatsapp.accessToken;
   if (!token || !flowId) return false;
   try {

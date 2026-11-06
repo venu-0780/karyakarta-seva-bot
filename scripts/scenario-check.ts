@@ -23,6 +23,7 @@ const { render, whatsAppButtonPayload, whatsAppListPayload, whatsAppCtaPayload }
   "../src/render/whatsapp.js"
 );
 const { makeContext } = await import("../tests/helpers.js");
+const { sampleDate } = await import("../src/data/sample.js");
 const { config } = await import("../src/config.js");
 
 const failures: string[] = [];
@@ -130,7 +131,7 @@ await scenario("talking points and yesterday", async () => {
   const today = await runAction(user(), "tp");
   check("today's points", /talking points/i.test(textOf(today)));
   const yday = await runAction(user(), "tp-y");
-  check("yesterday's points", /yesterday/i.test(textOf(yday)) || /08 Oct/.test(textOf(yday)));
+  check("yesterday's points", /yesterday/i.test(textOf(yday)) || textOf(yday).includes(sampleDate("yday")));
   await paint(today);
   await paint(yday);
 });
@@ -145,7 +146,9 @@ await scenario("press meets for three days and registration form", async () => {
   for (const day of ["pm-today", "pm-tmrw", "pm-yday"] as const) {
     const reply = await runAction(user(), day);
     check(`${day} schedule`, /press|LIVE|Upcoming|Recording|No press/i.test(textOf(reply)));
-    check(`${day} registration form`, arr(reply).some((item) => item.flow?.token === "event"));
+    const hasForm = arr(reply).some((item) => item.flow?.token === `event:${day.slice(3)}`);
+    // Past meets are recordings; there is nothing left to register for.
+    check(`${day} registration form`, day === "pm-yday" ? !hasForm : hasForm);
     await paint(reply);
   }
 });
@@ -181,9 +184,9 @@ await scenario("poll vote, chart, one-vote rule, and survey offer", async () => 
 
 await scenario("id card found, ready to collect, missing, and invalid", async () => {
   const offer = await runText(user(), "check my id status");
-  check("id confirm step", idsOf(offer).includes("id-yes"));
+  check("asks for the number", /10-digit mobile number/i.test(textOf(offer)));
   const found = await runText(user(), "9876543210");
-  check("found member", /Ravi Kumar/.test(textOf(found)) && arr(found).some((item) => item.reactionEmoji === "✅"));
+  check("found member, masked", /K\. R\*\*\*/.test(textOf(found)) && arr(found).some((item) => item.reactionEmoji === "✅"));
   const ready = await runText(user(), "9000000001");
   check("collection pin", arr(ready).some((item) => item.location?.name?.includes("Kadapa")));
   const missing = await runText(user(), "9999999999");
