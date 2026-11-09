@@ -2,7 +2,8 @@ import { config, thanksSticker } from "../config.js";
 import { idFormData, senderMobile, senderPrefill } from "./formText.js";
 import { PARTY_CONTACT } from "../data/sample.js";
 import { STAGES } from "../data/repository.js";
-import { backButton, L, LB, PH, readLangPref, t } from "../services/i18n.js";
+import { backButton, L, LB, PH, readLangPref, t, type LangPref, type Phrase } from "../services/i18n.js";
+import type { IdCardService } from "../services/cadre/idCardService.js";
 import type { FlowContext, Reply } from "../types.js";
 
 export function isYes(raw: string): boolean {
@@ -97,6 +98,120 @@ export async function idAsk(ctx: FlowContext): Promise<Reply> {
   return chatPrompt;
 }
 
+// Copy for each cadre ID-card code. Unknown codes fall back to "unknown".
+const CADRE_STATUS: Record<string, Phrase> = {
+  issued: { te: "✅ ఐడి కార్డు జారీ అయింది.", en: "✅ ID card issued." },
+  verification_required: {
+    te: "🟡 ఇంకా ధృవీకరణ కాలేదు. కేడర్ పోర్టల్‌లో లేదా మీ కోఆర్డినేటర్‌తో నిర్ధారించుకోండి.",
+    en: "🟡 Not verified yet. Confirm in the cadre portal or with your coordinator.",
+  },
+  rejected_image_quality: {
+    te: "❌ ఫోటో నాణ్యత కారణంగా ఐడి కార్డు తిరస్కరించారు. కొత్త ఫోటో పంపండి.",
+    en: "❌ ID card rejected because of photo quality. Send a new photo.",
+  },
+  requires_review: {
+    te: "🔎 ఐడి కార్డు సమీక్షలో ఉంది. దయచేసి హెల్ప్‌డెస్క్‌ను సంప్రదించండి.",
+    en: "🔎 Under review. Please contact the helpdesk.",
+  },
+  internal_issue: {
+    te: "🔎 ఐడి కార్డు సమీక్షలో ఉంది. దయచేసి హెల్ప్‌డెస్క్‌ను సంప్రదించండి.",
+    en: "🔎 Under review. Please contact the helpdesk.",
+  },
+  unknown: {
+    te: "ℹ️ స్థితి అందుబాటులో లేదు. దయచేసి మీ కోఆర్డినేటర్‌ను సంప్రదించండి.",
+    en: "ℹ️ Status not available. Please contact your coordinator.",
+  },
+};
+const CADRE_NEEDS_HELP = new Set(["verification_required", "requires_review", "internal_issue", "unknown"]);
+const CADRE_UNAVAILABLE: Record<"quota" | "error", Phrase> = {
+  quota: {
+    te: "⚠️ ఇప్పుడు చాలా తనిఖీలు జరిగాయి. కొద్దిసేపు తర్వాత మళ్లీ ప్రయత్నించండి.",
+    en: "⚠️ Too many checks right now. Please try again in a few minutes.",
+  },
+  error: {
+    te: "⚠️ ఇప్పుడు స్థితిని తనిఖీ చేయలేకపోయాం. కొద్దిసేపు తర్వాత మళ్లీ ప్రయత్నించండి.",
+    en: "⚠️ Could not check the status right now. Please try again in a few minutes.",
+  },
+};
+const CADRE_SHOW_LIMIT = 5;
+
+/** Reply for a number checked against the live cadre API (replaces the sample timeline). */
+async function cadreStatusReply(
+  ctx: FlowContext,
+  service: IdCardService,
+  pref: LangPref,
+  num: string,
+  masked: string,
+): Promise<Reply> {
+  const lookup = await service.lookup(num);
+  const again = { id: "id", label: LB(pref, PH.tryAnother) };
+  const back = backButton(pref);
+
+  if (lookup.kind === "unavailable") {
+    return { text: L(pref, CADRE_UNAVAILABLE[lookup.reason]), buttons: [again, back], contacts: [PARTY_CONTACT] };
+  }
+  if (lookup.kind === "not_found") {
+    return {
+      text: L(pref, {
+        te:
+          `❌ *${masked}* నంబర్‌తో ఐడి కార్డు రికార్డు కనిపించలేదు.\n` +
+          "నమోదు చేసిన నంబర్ సరిచూసుకోండి, లేదా మీ మండల కోఆర్డినేటర్‌ను సంప్రదించండి.",
+        en:
+          `❌ No ID card record found for *${masked}*.\n` +
+          "Check the number you registered with, or contact your mandal coordinator.",
+      }),
+      buttons: [again, back],
+      contacts: [PARTY_CONTACT],
+    };
+  }
+
+  const own = num === senderMobile(ctx.userId);
+  const nameLbl = LB(pref, { te: "పేరు", en: "Name" });
+  const shown = lookup.records.slice(0, CADRE_SHOW_LIMIT);
+  const blocks = shown.map((record) => {
+    const name = own ? record.name : maskName(record.name);
+    const status = Object.prototype.hasOwnProperty.call(CADRE_STATUS, record.code)
+      ? CADRE_STATUS[record.code]!
+      : CADRE_STATUS.unknown!;
+    return `${nameLbl}: *${name}*\n${LB(pref, status)}`;
+  });
+  const hidden = lookup.records.length - shown.length;
+  const more =
+    hidden > 0
+      ? `\n\n${L(pref, {
+          te: `…మరో ${hidden} రికార్డు(లు) ఉన్నాయి. కోఆర్డినేటర్‌ను సంప్రదించండి.`,
+          en: `…and ${hidden} more record(s). Contact your coordinator.`,
+        })}`
+      : "";
+  const asOf = lookup.asOf ?? "?";
+  const footer = L(pref, {
+    te: `${asOf} నాటి కేడర్ డేటా ఆధారంగా. ఇది ప్రత్యక్ష పోర్టల్ తనిఖీ కాదు.`,
+    en: `Based on cadre data as of ${asOf}. This is not a live portal check.`,
+  });
+  const note = own
+    ? ""
+    : `\n\n_${L(pref, {
+        te: "ఇది వేరే నంబర్ కాబట్టి పేరు దాచాం.",
+        en: "Name is partly hidden because this is not your WhatsApp number.",
+      })}_`;
+
+  const issued = lookup.records.some((record) => record.code === "issued");
+  const needsHelp = lookup.records.some(
+    (record) => CADRE_NEEDS_HELP.has(record.code) || !Object.prototype.hasOwnProperty.call(CADRE_STATUS, record.code),
+  );
+  const sticker = issued ? thanksSticker() : undefined;
+  return {
+    ...(issued ? { reactionEmoji: "✅" } : {}),
+    ...(sticker ? { sticker } : {}),
+    text:
+      `🪪 *${LB(pref, { te: "ఐడి కార్డు స్థితి", en: "ID card status" })}* · ${masked}\n\n` +
+      `${blocks.join("\n\n")}${more}\n\n` +
+      `_${footer}_${note}`,
+    buttons: [again, back],
+    ...(needsHelp ? { contacts: [PARTY_CONTACT] } : {}),
+  };
+}
+
 // Flow 6 — look up a number sent while in the `id` state (or detected anywhere)
 export async function idCheck(ctx: FlowContext, raw: string): Promise<Reply> {
   const pref = readLangPref(ctx.session.data);
@@ -124,6 +239,7 @@ export async function idCheck(ctx: FlowContext, raw: string): Promise<Reply> {
 
   await ctx.setState("idle");
   const masked = num.slice(0, 2) + "XXXXX" + num.slice(7);
+  if (ctx.services.idCard) return cadreStatusReply(ctx, ctx.services.idCard, pref, num, masked);
   const r = await ctx.services.repos.membership.lookup(num);
   if (!r) {
     return {

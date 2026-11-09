@@ -177,6 +177,7 @@ import type { Analytics } from "./services/analytics.js";
 import type { LanguageStore } from "./services/prefs.js";
 import type { EscalationStore } from "./services/escalation.js";
 import type { SubmissionStore } from "./services/submissions.js";
+import type { IdCardService } from "./services/cadre/idCardService.js";
 
 export interface Services {
   repos: Repositories;
@@ -188,4 +189,6 @@ export interface Services {
   escalation: EscalationStore;
   /** Structured form submissions (events, membership, surveys, feedback). */
   submissions: SubmissionStore;
+  /** Live ID-card status from the cadre API. Undefined = use sample membership data. */
+  idCard?: IdCardService;
 }

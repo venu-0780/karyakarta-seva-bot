@@ -45,6 +45,14 @@ export const config = {
   // Required to trigger an alert over HTTP; when unset, those routes refuse all
   // requests (so a deploy can never expose an open broadcast trigger).
   alertsSecret: process.env.ALERTS_SECRET,
+  // Live ID-card status from the cadre membership API. Active only when both the
+  // client id and secret are set; otherwise the ID-card flow uses sample data.
+  cadre: {
+    baseUrl: opt("CADRE_BASE_URL", "https://ysrcpcommunications.com").replace(/\/+$/, ""),
+    clientId: process.env.CADRE_CLIENT_ID,
+    clientSecret: process.env.CADRE_CLIENT_SECRET,
+    enabled: Boolean(process.env.CADRE_CLIENT_ID && process.env.CADRE_CLIENT_SECRET),
+  },
   // Poll results are rendered as a real bar-chart image by default. Set
   // CHART_IMAGES=0 to fall back to the inline text/ASCII bars (e.g. if the
   // deployment can't serve the image route).

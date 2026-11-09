@@ -27,6 +27,8 @@ import { MemorySessionStore, RedisSessionStore, type SessionStore } from "./serv
 import { usableDisplayName } from "./services/displayName.js";
 import { submissionStore } from "./services/submissions.js";
 import { subscriberStore } from "./services/subscribers.js";
+import { cadreIdCardServiceFromConfig } from "./services/cadre/idCardService.js";
+import { MemoryTtlCache, RedisTtlCache } from "./services/ttlCache.js";
 import type { FlowContext, Reply, Services } from "./types.js";
 
 // --- Service container -------------------------------------------------------
@@ -47,13 +49,19 @@ const escalation: EscalationStore = {
   },
 };
 
+const rateLimit = useRedis ? new RedisRateLimiter() : new MemoryRateLimiter();
 const services: Services = {
   repos: createSampleRepositories(),
-  rateLimit: useRedis ? new RedisRateLimiter() : new MemoryRateLimiter(),
+  rateLimit,
   analytics: useRedis ? new RedisAnalytics() : new MemoryAnalytics(),
   prefs: useRedis ? new RedisLanguageStore() : new MemoryLanguageStore(),
   escalation,
   submissions: submissionStore(),
+  // Live cadre lookups when CADRE_CLIENT_ID / CADRE_CLIENT_SECRET are set.
+  idCard: cadreIdCardServiceFromConfig({
+    cache: useRedis ? new RedisTtlCache() : new MemoryTtlCache(),
+    rateLimit,
+  }),
 };
 const sessions: SessionStore = useRedis ? new RedisSessionStore() : new MemorySessionStore();
 
