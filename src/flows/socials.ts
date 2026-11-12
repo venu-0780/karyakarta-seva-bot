@@ -1,6 +1,8 @@
 // Social card demo. One message does the add: paste a link or a short line
 // (`ig @ravi`). A bare @handle is the only follow-up, and it is three buttons.
 // Handles live on the chat session only. There is no profile store.
+import { config } from "../config.js";
+import { socialFormData } from "./formText.js";
 import { backButton, L, LB, PH, readLangPref, type LangPref, type Phrase } from "../services/i18n.js";
 import type { FlowContext, Reply } from "../types.js";
 
@@ -199,11 +201,86 @@ function whichReply(ctx: FlowContext, handle: string): Reply {
   };
 }
 
+function formValues(entries: SocialEntry[]) {
+  const value = (platform: PlatformId) => {
+    const entry = entries.find((item) => item.platform === platform);
+    return entry ? showHandle(entry) : "";
+  };
+  const more = [...entries].reverse().find((item) => item.platform === "other");
+  return {
+    facebook: value("fb"),
+    instagram: value("ig"),
+    x: value("x"),
+    youtube: value("yt"),
+    more_name: more?.name ?? "",
+    more_link: more ? showHandle(more) : "",
+  };
+}
+
 export async function socialCard(ctx: FlowContext): Promise<Reply> {
   const { socialDraft: _drop, ...rest } = ctx.session.data;
   ctx.session.data = rest;
   await ctx.setState("social", ctx.session.data);
-  return cardReply(ctx);
+  const card = cardReply(ctx);
+  const flowId = config.flows.social;
+  if (!flowId) return card;
+  const pref = readLangPref(ctx.session.data);
+  return {
+    ...card,
+    flow: {
+      flowId,
+      token: "social",
+      screen: "SOCIAL",
+      cta: LB(pref, { te: "ఫారమ్", en: "Open form" }),
+      body: L(pref, {
+        te: "పేజీలను ఫారమ్‌లో నింపండి. ఖాళీగా ఉంచినవి మారవు.",
+        en: "Fill your pages in the form. Blank fields stay as they are.",
+      }),
+      data: socialFormData(pref, formValues(readCard(ctx.session.data))),
+      footer: LB(pref, PH.formBack),
+    },
+  };
+}
+
+/** Apply a submitted social form onto the chat card. Blank fields are left alone. */
+export async function socialFromForm(ctx: FlowContext, fields: Record<string, string>): Promise<Reply> {
+  const pref = readLangPref(ctx.session.data);
+  let next = readCard(ctx.session.data);
+  const saved: string[] = [];
+  const known: { platform: PlatformId; raw: string }[] = [
+    { platform: "fb", raw: fields.facebook ?? "" },
+    { platform: "ig", raw: fields.instagram ?? "" },
+    { platform: "x", raw: fields.x ?? "" },
+    { platform: "yt", raw: fields.youtube ?? "" },
+  ];
+  for (const item of known) {
+    if (!item.raw.trim()) continue;
+    const handle = cleanHandle(item.raw);
+    if (!handle) continue;
+    next = next.filter((entry) => entry.platform !== item.platform);
+    if (next.length >= MAX_ENTRIES) continue;
+    const meta = platformOf(item.platform)!;
+    next.push({ platform: item.platform, name: meta.title.en, handle });
+    saved.push(LB(pref, meta.title));
+  }
+  const moreName = (fields.more_name ?? "").trim().replace(/\s+/g, " ").slice(0, 24);
+  const moreHandle = cleanHandle(fields.more_link ?? "");
+  if (moreName.length >= 2 && moreHandle && next.length < MAX_ENTRIES) {
+    next = next.filter((entry) => entry.platform !== "other" || entry.name.toLowerCase() !== moreName.toLowerCase());
+    next.push({ platform: "other", name: moreName, handle: moreHandle });
+    saved.push(moreName);
+  }
+  if (!saved.length) {
+    await ctx.setState("social", ctx.session.data);
+    return cardReply(
+      ctx,
+      L(pref, { te: "కనీసం ఒక పేజీ నింపండి.", en: "Fill at least one page." }),
+    );
+  }
+  const { socialDraft: _drop, ...rest } = ctx.session.data;
+  ctx.session.data = { ...rest, socialCard: next };
+  await ctx.setState("social", ctx.session.data);
+  return cardReply(ctx, L(pref, { te: `✅ సేవ్ అయింది: ${saved.join(", ")}`, en: `✅ Saved: ${saved.join(", ")}` }));
 }
 
 async function commit(ctx: FlowContext, platform: PlatformId, handle: string, name?: string): Promise<Reply> {

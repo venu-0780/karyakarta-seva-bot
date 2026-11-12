@@ -105,6 +105,24 @@ test("delivery counters ignore a repeated status", async () => {
   assert.equal(memoryDeliveryCounts().read, 1);
 });
 
+test("social form writes the filled pages onto the chat card", async () => {
+  const ctx = makeContext();
+  const reply = await completeForm(ctx, "social", {
+    instagram: "https://instagram.com/ravi",
+    more_name: "ShareChat",
+    more_link: "@village",
+    facebook: "",
+  });
+  const text = Array.isArray(reply) ? reply.map((item) => item.text ?? "").join("\n") : reply?.text ?? "";
+  assert.match(text, /@ravi/);
+  assert.match(text, /ShareChat/);
+  assert.match(text, /village/);
+  const empty = await completeForm(ctx, "social", { facebook: " " });
+  const again = Array.isArray(empty) ? empty.map((item) => item.text ?? "").join("\n") : empty?.text ?? "";
+  assert.match(again, /Fill at least one page/);
+  assert.match(again, /@ravi/);
+});
+
 test("feedback completion stores a ticket and confirms", async () => {
   const ctx = makeContext();
   const reply = await completeForm(ctx, "feedback", {
@@ -147,11 +165,11 @@ test("forms pre-fill the sender's name and number", async () => {
 });
 
 test("form copy follows the language the user set", async () => {
-  const { idFormData, pollFormData, feedbackFormData, eventFormData, membershipFormData, surveyFormData } =
+  const { idFormData, pollFormData, feedbackFormData, eventFormData, membershipFormData, surveyFormData, socialFormData } =
     await import("../src/flows/formText.js");
   const telugu = /[\u0C00-\u0C7F]/;
   const eventPack = (pref: "en" | "te") => eventFormData(pref, [{ id: "0", title: "11:00 AM · Farmers" }]);
-  const packs = [idFormData, pollFormData, feedbackFormData, eventPack, membershipFormData, surveyFormData];
+  const packs = [idFormData, pollFormData, feedbackFormData, eventPack, membershipFormData, surveyFormData, socialFormData];
   for (const pack of packs) {
     const en = JSON.stringify(pack("en"));
     const te = JSON.stringify(pack("te"));

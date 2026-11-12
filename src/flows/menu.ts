@@ -62,7 +62,7 @@ const HELP_ROWS: MenuRow[] = [
   { id: "id", title: { te: "ఐడి కార్డు స్థితి", en: "ID card status" }, desc: { te: "మొబైల్ నంబర్‌తో చూడండి", en: "Check with your mobile number" } },
   { id: "media", title: { te: "పోస్టర్లు & రీల్స్", en: "Posters and reels" }, desc: { te: "ఫోటోలు, చిన్న వీడియోలు", en: "Images and short videos" } },
   { id: "near", title: { te: "దగ్గరి కార్యాలయం", en: "Nearest office" }, desc: { te: "మీ లొకేషన్ పంపండి", en: "Share your location" } },
-  { id: "social", title: { te: "నా సోషల్ కార్డు", en: "My social card" }, desc: { te: "లింక్ పంపండి", en: "Paste a link" } },
+  { id: "social", title: { te: "నా సోషల్ కార్డు", en: "My social card" }, desc: { te: "ఫారమ్ నింపండి", en: "Fill the form" } },
   { id: "handoff", title: { te: "కోఆర్డినేటర్ సహాయం", en: "Coordinator help" }, desc: { te: "ఫిర్యాదు, సూచన లేదా సందేశం", en: "Complaint, feedback, or a note" } },
 ];
 

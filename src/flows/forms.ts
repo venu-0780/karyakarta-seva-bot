@@ -8,6 +8,7 @@ import { PARTY_CONTACT } from "../data/sample.js";
 import type { PressMeet } from "../data/repository.js";
 import { makeTicket, ticketRef } from "../services/escalation.js";
 import type { EventDay } from "./events.js";
+import { socialFromForm } from "./socials.js";
 import { backButton, L, readLangPref } from "../services/i18n.js";
 import type { FlowContext, Reply } from "../types.js";
 
@@ -124,6 +125,11 @@ export async function completeForm(
       contacts: [PARTY_CONTACT],
       buttons: [backButton(pref)],
     };
+  }
+
+  if (token === "social") {
+    await ctx.services.analytics.track("form:social", ctx.userId);
+    return socialFromForm(ctx, fields);
   }
 
   if (token === "survey") {

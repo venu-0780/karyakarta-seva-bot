@@ -68,6 +68,7 @@ export const config = {
     event: process.env.EVENT_FLOW_ID,
     membership: process.env.MEMBERSHIP_FLOW_ID,
     survey: process.env.SURVEY_FLOW_ID,
+    social: process.env.SOCIAL_FLOW_ID,
   },
   // Optional branded sticker (WebP, 512x512). Sent on thank-you messages only
   // when set to a public https URL. Leave blank to skip stickers entirely.

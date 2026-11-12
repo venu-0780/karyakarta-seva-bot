@@ -64,6 +64,7 @@ async function main() {
     "event-register": "EVENT_FLOW_ID",
     membership: "MEMBERSHIP_FLOW_ID",
     survey: "SURVEY_FLOW_ID",
+    "social-card": "SOCIAL_FLOW_ID",
   };
   const stem = file.replace(/\.json$/, "");
   const envVar = envByFile[stem] ?? "FLOW_ID";

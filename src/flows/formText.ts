@@ -154,3 +154,45 @@ export function surveyFormData(pref: LangPref): Record<string, unknown> {
     send_label: short(pref, { te: "పంపండి", en: "Send" }, 35),
   };
 }
+
+/** One screen: a field per page, plus More for any other platform. All optional. */
+export function socialFormData(
+  pref: LangPref,
+  current?: {
+    facebook?: string;
+    instagram?: string;
+    x?: string;
+    youtube?: string;
+    more_name?: string;
+    more_link?: string;
+  },
+): Record<string, unknown> {
+  return {
+    title: short(pref, { te: "సోషల్ కార్డు", en: "Social card" }, 30),
+    intro: paragraph(pref, {
+      te: "మీరు వాడే పేజీలు నింపండి. మిగతావి ఖాళీగా ఉంచండి.",
+      en: "Fill the pages you use. Leave the rest blank.",
+    }),
+    facebook_label: "Facebook",
+    facebook_help: "facebook.com/ravi",
+    instagram_label: "Instagram",
+    instagram_help: "instagram.com/ravi",
+    x_label: "X",
+    x_help: "x.com/ravi",
+    youtube_label: "YouTube",
+    youtube_help: "youtube.com/@ravi",
+    more_name_label: short(pref, { te: "మరొక పేరు", en: "More name" }, 20),
+    more_name_help: short(pref, { te: "ShareChat, Telegram", en: "ShareChat, Telegram" }, 80),
+    more_link_label: short(pref, { te: "మరొక లింక్", en: "More link" }, 20),
+    more_link_help: short(pref, { te: "లింక్ లేదా ఐడి", en: "Link or id" }, 80),
+    save_label: short(pref, { te: "సేవ్", en: "Save" }, 35),
+    init_values: {
+      facebook: current?.facebook ?? "",
+      instagram: current?.instagram ?? "",
+      x: current?.x ?? "",
+      youtube: current?.youtube ?? "",
+      more_name: current?.more_name ?? "",
+      more_link: current?.more_link ?? "",
+    },
+  };
+}

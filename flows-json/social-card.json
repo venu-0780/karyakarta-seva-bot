@@ -1,0 +1,117 @@
+{
+  "version": "7.3",
+  "screens": [
+    {
+      "id": "SOCIAL",
+      "title": "${data.title}",
+      "terminal": true,
+      "success": true,
+      "data": {
+        "title": { "type": "string", "__example__": "Social card" },
+        "intro": { "type": "string", "__example__": "Fill the pages you use. Leave the rest blank." },
+        "facebook_label": { "type": "string", "__example__": "Facebook" },
+        "facebook_help": { "type": "string", "__example__": "facebook.com/ravi" },
+        "instagram_label": { "type": "string", "__example__": "Instagram" },
+        "instagram_help": { "type": "string", "__example__": "instagram.com/ravi" },
+        "x_label": { "type": "string", "__example__": "X" },
+        "x_help": { "type": "string", "__example__": "x.com/ravi" },
+        "youtube_label": { "type": "string", "__example__": "YouTube" },
+        "youtube_help": { "type": "string", "__example__": "youtube.com/@ravi" },
+        "more_name_label": { "type": "string", "__example__": "More name" },
+        "more_name_help": { "type": "string", "__example__": "ShareChat, Telegram" },
+        "more_link_label": { "type": "string", "__example__": "More link" },
+        "more_link_help": { "type": "string", "__example__": "Link or id" },
+        "save_label": { "type": "string", "__example__": "Save" },
+        "init_values": {
+          "type": "object",
+          "properties": {
+            "facebook": { "type": "string" },
+            "instagram": { "type": "string" },
+            "x": { "type": "string" },
+            "youtube": { "type": "string" },
+            "more_name": { "type": "string" },
+            "more_link": { "type": "string" }
+          },
+          "__example__": {
+            "facebook": "",
+            "instagram": "",
+            "x": "",
+            "youtube": "",
+            "more_name": "",
+            "more_link": ""
+          }
+        }
+      },
+      "layout": {
+        "type": "SingleColumnLayout",
+        "children": [
+          { "type": "TextBody", "text": "${data.intro}" },
+          {
+            "type": "Form",
+            "name": "form",
+            "init-values": "${data.init_values}",
+            "children": [
+              {
+                "type": "TextInput",
+                "name": "facebook",
+                "label": "${data.facebook_label}",
+                "helper-text": "${data.facebook_help}",
+                "required": false
+              },
+              {
+                "type": "TextInput",
+                "name": "instagram",
+                "label": "${data.instagram_label}",
+                "helper-text": "${data.instagram_help}",
+                "required": false
+              },
+              {
+                "type": "TextInput",
+                "name": "x",
+                "label": "${data.x_label}",
+                "helper-text": "${data.x_help}",
+                "required": false
+              },
+              {
+                "type": "TextInput",
+                "name": "youtube",
+                "label": "${data.youtube_label}",
+                "helper-text": "${data.youtube_help}",
+                "required": false
+              },
+              {
+                "type": "TextInput",
+                "name": "more_name",
+                "label": "${data.more_name_label}",
+                "helper-text": "${data.more_name_help}",
+                "required": false
+              },
+              {
+                "type": "TextInput",
+                "name": "more_link",
+                "label": "${data.more_link_label}",
+                "helper-text": "${data.more_link_help}",
+                "required": false
+              },
+              {
+                "type": "Footer",
+                "label": "${data.save_label}",
+                "on-click-action": {
+                  "name": "complete",
+                  "payload": {
+                    "facebook": "${form.facebook}",
+                    "instagram": "${form.instagram}",
+                    "x": "${form.x}",
+                    "youtube": "${form.youtube}",
+                    "more_name": "${form.more_name}",
+                    "more_link": "${form.more_link}"
+                  }
+                }
+              }
+            ]
+          }
+        ]
+      }
+    }
+  ]
+}
