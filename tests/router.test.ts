@@ -42,24 +42,20 @@ test("natural language 'tomorrow press meet' deep-links to tomorrow", async () =
 });
 
 test("social card copy follows Telugu, English, and both", async () => {
-  const labels = (r: Reply) => arr(r).flatMap((x) => (x.buttons ?? []).map((b) => b.label));
+  const en = allText(await runAction(makeContext({ lang: "en" }), "social"));
+  assert.match(en, /Your social card/);
+  assert.match(en, /Send a link or a short line/);
+  assert.doesNotMatch(en, /[\u0C00-\u0C7F]/);
 
-  const en = await runAction(makeContext({ lang: "en" }), "social");
-  assert.match(allText(en), /Your social card/);
-  assert.doesNotMatch(allText(en), /[\u0C00-\u0C7F]/);
-  assert.ok(labels(en).includes("Add a page"));
+  const te = allText(await runAction(makeContext({ lang: "te" }), "social"));
+  assert.match(te, /మీ సోషల్ కార్డు/);
+  assert.match(te, /లింక్ పంపండి/);
+  assert.doesNotMatch(te, /Your social card/);
 
-  const te = await runAction(makeContext({ lang: "te" }), "social");
-  assert.match(allText(te), /మీ సోషల్ కార్డు/);
-  assert.doesNotMatch(allText(te), /Your social card/);
-  assert.ok(labels(te).includes("జోడించు"));
-
-  const both = await runAction(makeContext({ lang: "both" }), "social-ig");
-  const text = allText(both);
-  assert.match(text, /లింక్ లేదా ఐడి పంపండి/);
-  assert.match(text, /Send the link or the id/);
-  assert.ok(text.indexOf("లింక్") < text.indexOf("Send the link"));
-  assert.ok(labels(both).includes("కార్డుకు"));
+  const both = allText(await runAction(makeContext({ lang: "both" }), "social"));
+  assert.match(both, /లింక్ పంపండి/);
+  assert.match(both, /Send a link or a short line/);
+  assert.ok(both.indexOf("లింక్") < both.indexOf("Send a link"));
 });
 
 test("an ID search stops after 5 lookups in an hour", async () => {
@@ -73,22 +69,30 @@ test("an ID search stops after 5 lookups in an hour", async () => {
   assert.match(allText(blocked), /5\/hour/);
 });
 
-test("social card accepts a link in this chat and does not treat it as an ID search", async () => {
+test("social card places a link in one reply, and a bare @handle asks once", async () => {
   const ctx = makeContext();
-  const opened = await runAction(ctx, "social");
-  assert.match(allText(opened), /Your social card/);
-  assert.ok(allButtonIds(opened).includes("social-add"));
+  await runAction(ctx, "social");
+  assert.equal(ctx.session.state, "social");
 
-  await runAction(ctx, "social-ig");
-  assert.equal(ctx.session.state, "social-id");
   const saved = await runText(ctx, "https://instagram.com/ravi");
+  assert.match(allText(saved), /Instagram/);
   assert.match(allText(saved), /@ravi/);
+  assert.equal(ctx.session.state, "social");
   assert.doesNotMatch(allText(saved), /K\. R\*\*\*/);
 
-  await runAction(ctx, "social-fb");
-  const numeric = await runText(ctx, "9876543210");
-  assert.match(allText(numeric), /9876543210/);
-  assert.doesNotMatch(allText(numeric), /K\. R\*\*\*/);
+  const named = await runText(ctx, "fb 9876543210");
+  assert.match(allText(named), /Facebook/);
+  assert.match(allText(named), /9876543210/);
+  assert.doesNotMatch(allText(named), /K\. R\*\*\*/);
+
+  const which = await runText(ctx, "@lakshmi");
+  assert.deepEqual(allButtonIds(which), ["social-ig", "social-x", "social-yt"]);
+  const placed = await runAction(ctx, "social-x");
+  assert.match(allText(placed), /@lakshmi/);
+  assert.match(allText(placed), /\bX\b/);
+
+  const lookup = await runText(ctx, "9876543210");
+  assert.match(allText(lookup), /K\. R\*\*\*/);
 });
 
 test("a phone number triggers the ID lookup, masked when it is someone else's", async () => {

@@ -10,15 +10,7 @@ import { chooseLanguage, help, menu, setLanguage } from "./flows/menu.js";
 import { pollResult, polls, pollShow, vote } from "./flows/polls.js";
 import { prajaSankalpam } from "./flows/prajaSankalpam.js";
 import { pressMeet, pressMeetDay } from "./flows/pressMeet.js";
-import {
-  socialCard,
-  socialChoose,
-  socialOtherName,
-  socialPick,
-  socialRemove,
-  socialRemoveList,
-  socialSaveHandle,
-} from "./flows/socials.js";
+import { socialCard, socialPlace, socialRemove, socialRemoveList, socialTryText } from "./flows/socials.js";
 import { talkingPoints } from "./flows/talkingPoints.js";
 import { config } from "./config.js";
 import { sampleDate } from "./data/sample.js";
@@ -80,12 +72,9 @@ export async function runAction(ctx: FlowContext, act: string): Promise<Reply> {
   if (act === "join") return membershipAsk(ctx);
 
   if (act === "social") return socialCard(ctx);
-  if (act === "social-add") return socialPick(ctx);
-  if (act === "social-fb") return socialChoose(ctx, "fb");
-  if (act === "social-ig") return socialChoose(ctx, "ig");
-  if (act === "social-x") return socialChoose(ctx, "x");
-  if (act === "social-yt") return socialChoose(ctx, "yt");
-  if (act === "social-other") return socialChoose(ctx, "other");
+  if (act === "social-ig") return socialPlace(ctx, "ig");
+  if (act === "social-x") return socialPlace(ctx, "x");
+  if (act === "social-yt") return socialPlace(ctx, "yt");
   if (act === "social-rm") return socialRemoveList(ctx);
   if (act.startsWith("social-rm-")) return socialRemove(ctx, Number(act.slice("social-rm-".length)));
 
@@ -359,10 +348,12 @@ export async function runText(ctx: FlowContext, raw: string): Promise<Reply> {
   if (/^(help|\?|సహాయం|సాయం|సహాయము)$/i.test(s)) return help(ctx);
   if (/^(social|socials|my social|my social card|సోషల్|సోషల్ కార్డు)$/i.test(s)) return socialCard(ctx);
 
-  // Captured before intent matching and the ID-number shortcut, so a pasted
-  // page link or a numeric Facebook id stays on the social card.
-  if (ctx.session.state === "social-other") return socialOtherName(ctx, s);
-  if (ctx.session.state === "social-id") return socialSaveHandle(ctx, s);
+  // A link or `ig @name` while the card is open. Anything else ("press meet",
+  // a phone number) keeps its normal route.
+  if (ctx.session.state === "social" || ctx.session.state === "social-which") {
+    const placed = await socialTryText(ctx, s);
+    if (placed) return placed;
+  }
 
   // Human handoff: once the member tapped "Talk to coordinator" we're waiting
   // for their question — capture this message as the escalation. A short
@@ -420,8 +411,6 @@ export async function runText(ctx: FlowContext, raw: string): Promise<Reply> {
 
   // A phone-number-looking message anywhere -> ID lookup
   if (/^\+?[\d\s-]{10,14}$/.test(s)) return idCheck(ctx, s);
-
-  if (ctx.session.state === "social-pick") return socialPick(ctx);
 
   // Waiting for a shared location pin. Any other text re-shows the prompt,
   // unless an intent above already took them somewhere else.
