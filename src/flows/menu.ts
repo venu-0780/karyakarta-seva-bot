@@ -62,7 +62,7 @@ const HELP_ROWS: MenuRow[] = [
   { id: "id", title: { te: "ఐడి కార్డు స్థితి", en: "ID card status" }, desc: { te: "మొబైల్ నంబర్‌తో చూడండి", en: "Check with your mobile number" } },
   { id: "media", title: { te: "పోస్టర్లు & రీల్స్", en: "Posters and reels" }, desc: { te: "ఫోటోలు, చిన్న వీడియోలు", en: "Images and short videos" } },
   { id: "near", title: { te: "దగ్గరి కార్యాలయం", en: "Nearest office" }, desc: { te: "మీ లొకేషన్ పంపండి", en: "Share your location" } },
-  { id: "lang", title: { te: "భాష మార్చు", en: "Change language" }, desc: { te: "తెలుగు / English / రెండూ", en: "Telugu / English / Both" } },
+  { id: "social", title: { te: "నా సోషల్ కార్డు", en: "My social card" }, desc: { te: "Facebook, Instagram, X…", en: "Facebook, Instagram, X…" } },
   { id: "handoff", title: { te: "కోఆర్డినేటర్ సహాయం", en: "Coordinator help" }, desc: { te: "ఫిర్యాదు, సూచన లేదా సందేశం", en: "Complaint, feedback, or a note" } },
 ];
 
@@ -109,6 +109,7 @@ const HELP_COPY: Phrase = {
     "• _నా ఐడి స్థితి_\n" +
     "• _పోస్టర్లు చూపించు_\n" +
     "• _దగ్గరి కార్యాలయం_\n" +
+    "• _నా సోషల్ కార్డు_ — మీ పేజీల ప్రివ్యూ\n" +
     "• _కోఆర్డినేటర్ సహాయం_ — ఫిర్యాదు లేదా సందేశం\n\n" +
     "భాష మార్చాలంటే *English* లేదా *రెండూ* అని పంపండి.",
   en:
@@ -119,6 +120,7 @@ const HELP_COPY: Phrase = {
     "• _my ID status_\n" +
     "• _show posters_\n" +
     "• _nearest office_\n" +
+    "• _my social card_ — a preview of your pages\n" +
     "• _coordinator help_ — a complaint or a note to a person\n\n" +
     "Change language by typing *Telugu* or *both*.",
 };

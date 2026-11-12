@@ -66,6 +66,8 @@ test("menu still fits a WhatsApp list after the nearest-office row", async () =>
     const one = Array.isArray(reply) ? reply[reply.length - 1] : reply;
     const rows = one?.list?.sections.flatMap((section) => section.rows) ?? [];
     assert.equal(rows.length, 10);
+    assert.ok(rows.some((row) => row.id === "social"));
+    assert.equal(rows.some((row) => row.id === "lang"), false);
     assert.ok(rows.some((row) => row.id === "near"));
     const coordinator = rows.find((row) => row.id === "handoff");
     assert.ok(coordinator, "coordinator help is a menu row");

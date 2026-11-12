@@ -41,6 +41,56 @@ test("natural language 'tomorrow press meet' deep-links to tomorrow", async () =
   assert.match(allText(reply), new RegExp(`Tomorrow · .*, ${Number(dd)} ${mon}`));
 });
 
+test("social card copy follows Telugu, English, and both", async () => {
+  const labels = (r: Reply) => arr(r).flatMap((x) => (x.buttons ?? []).map((b) => b.label));
+
+  const en = await runAction(makeContext({ lang: "en" }), "social");
+  assert.match(allText(en), /Your social card/);
+  assert.doesNotMatch(allText(en), /[\u0C00-\u0C7F]/);
+  assert.ok(labels(en).includes("Add a page"));
+
+  const te = await runAction(makeContext({ lang: "te" }), "social");
+  assert.match(allText(te), /మీ సోషల్ కార్డు/);
+  assert.doesNotMatch(allText(te), /Your social card/);
+  assert.ok(labels(te).includes("జోడించు"));
+
+  const both = await runAction(makeContext({ lang: "both" }), "social-ig");
+  const text = allText(both);
+  assert.match(text, /లింక్ లేదా ఐడి పంపండి/);
+  assert.match(text, /Send the link or the id/);
+  assert.ok(text.indexOf("లింక్") < text.indexOf("Send the link"));
+  assert.ok(labels(both).includes("కార్డుకు"));
+});
+
+test("an ID search stops after 5 lookups in an hour", async () => {
+  const ctx = makeContext();
+  for (let i = 0; i < 5; i++) {
+    const reply = await runText(ctx, "9876543210");
+    assert.doesNotMatch(allText(reply), /Too many lookups/);
+  }
+  const blocked = await runText(ctx, "9123456780");
+  assert.match(allText(blocked), /Too many lookups/);
+  assert.match(allText(blocked), /5\/hour/);
+});
+
+test("social card accepts a link in this chat and does not treat it as an ID search", async () => {
+  const ctx = makeContext();
+  const opened = await runAction(ctx, "social");
+  assert.match(allText(opened), /Your social card/);
+  assert.ok(allButtonIds(opened).includes("social-add"));
+
+  await runAction(ctx, "social-ig");
+  assert.equal(ctx.session.state, "social-id");
+  const saved = await runText(ctx, "https://instagram.com/ravi");
+  assert.match(allText(saved), /@ravi/);
+  assert.doesNotMatch(allText(saved), /K\. R\*\*\*/);
+
+  await runAction(ctx, "social-fb");
+  const numeric = await runText(ctx, "9876543210");
+  assert.match(allText(numeric), /9876543210/);
+  assert.doesNotMatch(allText(numeric), /K\. R\*\*\*/);
+});
+
 test("a phone number triggers the ID lookup, masked when it is someone else's", async () => {
   const ctx = makeContext();
   const reply = await runText(ctx, "9876543210");
